@@ -53,6 +53,8 @@ OBSTACLE_TYPES = [
     "conveyor",   # конвейер
     "freezer",    # витрина
     "box",        # коробки (низкое препятствие, можно перепрыгнуть)
+    "long_box",   # длинный ряд коробок (нужен более длинный прыжок)
+    "hanging_sign",  # навесная вывеска (нужно пригнуться)
 ]
 
 ENEMY_TYPES = ["butcher", "scanner", "robot"]
@@ -99,7 +101,7 @@ class Player:
     def jump(self):
         if self.jump_count < self.max_jumps:
             # longer and smoother airtime
-            self.vel_y = -14.0
+            self.vel_y = -16.8
             self.on_ground = False
             self.jump_count += 1
 
@@ -127,7 +129,7 @@ class Player:
 
         # Jump physics
         if not self.on_ground:
-            self.vel_y += 22.0 * dt
+            self.vel_y += 17.0 * dt
             self.y += self.vel_y
             ground = LANES_Y[self.target_lane]
             if self.y >= ground:
@@ -167,6 +169,10 @@ class Entity:
             self.w, self.h = 95, 90
         elif etype == "box":
             self.w, self.h = 66, 34
+        elif etype == "long_box":
+            self.w, self.h = 170, 38
+        elif etype == "hanging_sign":
+            self.w, self.h = 105, 55
         elif etype in ["mop", "scanner"]:
             self.w, self.h = 40, 100
         elif etype in ["kid", "butcher", "robot"]:
@@ -175,6 +181,9 @@ class Entity:
             self.w, self.h = 120, 42
         else:  # powerup
             self.w, self.h = 42, 42
+
+        if etype == "hanging_sign":
+            self.y = LANES_Y[lane] - 36
 
     @property
     def rect(self) -> pygame.Rect:
@@ -442,6 +451,8 @@ class Game:
             y0 = int(HEIGHT * 0.42 + i * 24)
             shade = max(150, 240 - i * 6)
             pygame.draw.rect(self.screen, (shade, shade, shade + 10), (0, y0, WIDTH, 26))
+            if i % 2 == 0:
+                pygame.draw.line(self.screen, (245, 245, 255), (0, y0 + 2), (WIDTH, y0 + 2), 1)
 
         # moving shelf silhouettes (parallax)
         for i in range(9):
@@ -480,6 +491,12 @@ class Game:
             overlay = pygame.Surface((WIDTH, 56), pygame.SRCALPHA)
             overlay.fill((255, 255, 255, 40))
             self.screen.blit(overlay, (0, ly - 52))
+
+        # tiny ambient sparkles to reduce flat/carton look
+        for i in range(18):
+            sx = int((i * 80 + t * 55) % WIDTH)
+            sy = 180 + int(16 * math.sin(t * 1.8 + i))
+            pygame.draw.circle(self.screen, (255, 255, 255), (sx, sy), 1)
 
     def draw_player(self):
         if not self.player:
@@ -551,6 +568,20 @@ class Game:
             pygame.draw.rect(self.screen, (190, 134, 66), (r.x + 2, r.y + 2, r.w - 4, r.h - 4), 2, border_radius=6)
             pygame.draw.line(self.screen, (148, 92, 36), (r.centerx, r.y + 2), (r.centerx, r.bottom - 2), 2)
             pygame.draw.line(self.screen, (148, 92, 36), (r.x + 4, r.centery), (r.right - 4, r.centery), 2)
+        elif et == "long_box":
+            pygame.draw.rect(self.screen, (220, 162, 94), r, border_radius=6)
+            segment = r.w // 3
+            for i in range(3):
+                sx = r.x + i * segment
+                pygame.draw.rect(self.screen, (198, 138, 70), (sx + 2, r.y + 2, segment - 4, r.h - 4), 2, border_radius=4)
+                pygame.draw.line(self.screen, (148, 92, 36), (sx + segment // 2, r.y + 4), (sx + segment // 2, r.bottom - 4), 2)
+        elif et == "hanging_sign":
+            pygame.draw.rect(self.screen, (255, 226, 98), r, border_radius=8)
+            pygame.draw.rect(self.screen, (190, 124, 40), r, 3, border_radius=8)
+            pygame.draw.line(self.screen, (150, 150, 165), (r.x + 16, r.y - 14), (r.x + 16, r.y), 3)
+            pygame.draw.line(self.screen, (150, 150, 165), (r.right - 16, r.y - 14), (r.right - 16, r.y), 3)
+            warn = self.small_font.render("LOW", True, (70, 35, 15))
+            self.screen.blit(warn, (r.centerx - warn.get_width() // 2, r.y + 16))
 
         elif et == "butcher":
             pygame.draw.rect(self.screen, (255, 255, 255), r, border_radius=10)

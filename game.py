@@ -339,9 +339,13 @@ class Game:
                         self.buy_upgrade("coin_bonus")
 
                 elif self.state == "running" and self.player:
-                    if event.key in (pygame.K_LEFT, pygame.K_w):
+                    if event.key == pygame.K_w:
+                        self.player.move_lane(+1)
+                    elif event.key == pygame.K_s:
                         self.player.move_lane(-1)
-                    elif event.key in (pygame.K_RIGHT, pygame.K_s):
+                    elif event.key == pygame.K_LEFT:
+                        self.player.move_lane(-1)
+                    elif event.key == pygame.K_RIGHT:
                         self.player.move_lane(+1)
                     elif event.key in (pygame.K_UP, pygame.K_SPACE):
                         self.player.jump()

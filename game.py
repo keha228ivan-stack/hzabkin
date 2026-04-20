@@ -210,6 +210,7 @@ class Game:
 
         # Swipe support
         self.touch_start = None
+        self.cloud_offset = 0.0
 
     def load_save(self):
         default = {
@@ -338,13 +339,13 @@ class Game:
                         self.buy_upgrade("coin_bonus")
 
                 elif self.state == "running" and self.player:
-                    if event.key in (pygame.K_LEFT, pygame.K_a):
+                    if event.key in (pygame.K_LEFT, pygame.K_w):
                         self.player.move_lane(-1)
-                    elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                    elif event.key in (pygame.K_RIGHT, pygame.K_s):
                         self.player.move_lane(+1)
-                    elif event.key in (pygame.K_UP, pygame.K_w, pygame.K_SPACE):
+                    elif event.key in (pygame.K_UP, pygame.K_SPACE):
                         self.player.jump()
-                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    elif event.key == pygame.K_DOWN:
                         self.player.slide()
                     elif event.key == pygame.K_ESCAPE:
                         self.state = "menu"
@@ -415,6 +416,14 @@ class Game:
     def draw_background(self, t: float):
         self.screen.fill(STORE_BG)
 
+        # bright animated header
+        pygame.draw.rect(self.screen, (255, 222, 150), (0, 0, WIDTH, 140))
+        pygame.draw.rect(self.screen, (255, 235, 180), (0, 120, WIDTH, 70))
+        for i in range(8):
+            x = 80 + i * 160
+            pulse = 14 + int(4 * math.sin(t * 2.3 + i))
+            pygame.draw.ellipse(self.screen, (255, 250, 210), (x, 26, 95, pulse))
+
         # pseudo-3D floor gradient stripes
         for i in range(14):
             y0 = int(HEIGHT * 0.42 + i * 24)
@@ -427,10 +436,37 @@ class Game:
             pygame.draw.rect(self.screen, (195, 210, 235), (x, 120, 130, 180), border_radius=12)
             pygame.draw.rect(self.screen, (180, 198, 228), (x + 10, 145, 110, 12), border_radius=5)
             pygame.draw.rect(self.screen, (180, 198, 228), (x + 10, 200, 110, 12), border_radius=5)
+            for j in range(4):
+                color = [(246, 110, 110), (98, 195, 122), (86, 165, 255), (248, 197, 88)][j]
+                pygame.draw.rect(self.screen, color, (x + 16 + j * 24, 160, 18, 30), border_radius=4)
 
-        # lanes
-        for lane_y in LANES_Y:
-            pygame.draw.line(self.screen, (170, 170, 188), (0, lane_y + 6), (WIDTH, lane_y + 6), 2)
+        # moving decorative elements
+        for i in range(5):
+            bx = WIDTH - ((t * 120 + i * 250) % (WIDTH + 220))
+            by = 80 + int(math.sin(t * 1.4 + i) * 15)
+            pygame.draw.circle(self.screen, (255, 120, 160), (int(bx), by), 22)
+            pygame.draw.circle(self.screen, (255, 182, 70), (int(bx + 36), by + 18), 18)
+            pygame.draw.line(self.screen, (190, 190, 210), (int(bx), by + 22), (int(bx), by + 44), 2)
+            pygame.draw.line(self.screen, (190, 190, 210), (int(bx + 36), by + 36), (int(bx + 36), by + 58), 2)
+
+        # strong lane separators
+        lane_bands = [
+            ((77, 156, 255), (148, 210, 255)),
+            ((255, 146, 92), (255, 210, 126)),
+            ((139, 118, 255), (198, 165, 255)),
+        ]
+        for idx, lane_y in enumerate(LANES_Y):
+            main, glow = lane_bands[idx]
+            band_top = lane_y + 5
+            pygame.draw.rect(self.screen, glow, (0, band_top - 6, WIDTH, 14), border_radius=8)
+            pygame.draw.rect(self.screen, main, (0, band_top - 2, WIDTH, 6), border_radius=6)
+            pygame.draw.line(self.screen, WHITE, (0, band_top + 1), (WIDTH, band_top + 1), 2)
+
+        if self.player and self.state == "running":
+            ly = LANES_Y[self.player.target_lane]
+            overlay = pygame.Surface((WIDTH, 56), pygame.SRCALPHA)
+            overlay.fill((255, 255, 255, 40))
+            self.screen.blit(overlay, (0, ly - 52))
 
     def draw_player(self):
         if not self.player:
@@ -445,8 +481,11 @@ class Game:
                 return
 
         # sausage body
+        outline = body_rect.inflate(8, 8)
+        pygame.draw.ellipse(self.screen, (96, 46, 40), outline)
         pygame.draw.ellipse(self.screen, p.sausage.color, body_rect)
-        pygame.draw.ellipse(self.screen, (250, 220, 180), body_rect.inflate(-30, -18), 2)
+        pygame.draw.ellipse(self.screen, (250, 220, 180), body_rect.inflate(-30, -18), 3)
+        pygame.draw.ellipse(self.screen, (255, 245, 225), (body_rect.x + 8, body_rect.y + 6, 42, 12))
 
         # cartoon face
         eye_y = body_rect.y + 14
@@ -460,13 +499,17 @@ class Game:
         if p.sliding:
             pygame.draw.ellipse(self.screen, (255, 255, 255, 90), (body_rect.x - 34, body_rect.y + 20, 26, 10))
 
+        shadow_w = int(52 + 10 * math.sin(pygame.time.get_ticks() * 0.015))
+        pygame.draw.ellipse(self.screen, (120, 120, 145), (body_rect.centerx - shadow_w // 2, LANES_Y[p.target_lane] - 4, shadow_w, 12))
+
     def draw_entity(self, ent: Entity):
         r = ent.rect
         et = ent.etype
 
         # Obstacles and enemies in bright comic style
         if et == "cart":
-            pygame.draw.rect(self.screen, (145, 160, 180), r, border_radius=8)
+            pygame.draw.rect(self.screen, (112, 132, 165), r, border_radius=8)
+            pygame.draw.rect(self.screen, (185, 205, 235), r.inflate(-12, -28), border_radius=6)
             pygame.draw.circle(self.screen, (40, 40, 40), (r.x + 18, r.bottom), 8)
             pygame.draw.circle(self.screen, (40, 40, 40), (r.right - 18, r.bottom), 8)
         elif et == "mop":
@@ -476,9 +519,12 @@ class Game:
             pygame.draw.rect(self.screen, (190, 120, 65), r, border_radius=6)
             pygame.draw.rect(self.screen, (240, 220, 90), (r.x + 6, r.y + 16, r.w - 12, 12))
             pygame.draw.rect(self.screen, (95, 210, 140), (r.x + 6, r.y + 40, r.w - 12, 12))
+            pygame.draw.rect(self.screen, (255, 130, 130), (r.x + 6, r.y + 64, r.w - 12, 12))
         elif et == "kid":
             pygame.draw.circle(self.screen, (255, 220, 160), (r.centerx, r.y + 20), 16)
             pygame.draw.rect(self.screen, (95, 145, 255), (r.x + 12, r.y + 34, r.w - 24, r.h - 34), border_radius=10)
+            pygame.draw.circle(self.screen, (255, 90, 140), (r.centerx - 14, r.y + 18), 2)
+            pygame.draw.circle(self.screen, (255, 90, 140), (r.centerx + 14, r.y + 18), 2)
         elif et == "conveyor":
             pygame.draw.rect(self.screen, (90, 90, 105), r, border_radius=8)
             for i in range(4):
@@ -491,13 +537,17 @@ class Game:
             pygame.draw.rect(self.screen, (255, 255, 255), r, border_radius=10)
             pygame.draw.circle(self.screen, (255, 215, 170), (r.centerx, r.y + 16), 12)
             pygame.draw.circle(self.screen, (80, 80, 80), (r.right - 10, r.y + 24), 10, 2)
+            pygame.draw.rect(self.screen, (220, 36, 64), (r.x + 12, r.y + 40, r.w - 24, 10), border_radius=5)
         elif et == "scanner":
             pygame.draw.rect(self.screen, PURPLE, r, border_radius=8)
             pygame.draw.rect(self.screen, (255, 120, 170), (r.x + 6, r.y + 10, r.w - 12, 9))
+            pulse = int(100 + 80 * (0.5 + 0.5 * math.sin(pygame.time.get_ticks() * 0.03)))
+            pygame.draw.rect(self.screen, (255, pulse, pulse), (r.x + 6, r.y + 25, r.w - 12, 7))
         elif et == "robot":
             pygame.draw.rect(self.screen, (155, 175, 205), r, border_radius=10)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx - 12, r.y + 18), 5)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx + 12, r.y + 18), 5)
+            pygame.draw.rect(self.screen, (120, 150, 185), (r.x + 12, r.bottom - 14, r.w - 24, 8), border_radius=4)
 
         # Powerups
         elif et == "ketchup":
@@ -516,6 +566,8 @@ class Game:
         elif et == "olive":
             pygame.draw.circle(self.screen, GREEN, r.center, r.w // 2)
             self.draw_letter("+", r.center)
+
+        pygame.draw.rect(self.screen, (30, 30, 45), r, 2, border_radius=8)
 
     def draw_letter(self, letter: str, pos):
         txt = self.small_font.render(letter, True, (30, 30, 30))
@@ -588,7 +640,7 @@ class Game:
             f"H: Жизни ({up['hp']}/5), цена {30 + up['hp'] * 35}",
             f"S: Скорость ({up['speed']}/5), цена {30 + up['speed'] * 35}",
             f"C: Бонус монет ({up['coin_bonus']}/5), цена {30 + up['coin_bonus'] * 35}",
-            "Управление: ←/→ смена полосы, ↑ прыжок, ↓ подкат, свайпы тоже работают",
+            "Управление: W/S (или ←/→) смена полосы, ↑ прыжок, ↓ подкат, свайпы тоже работают",
         ]
 
         panel = pygame.Rect(120, 470, WIDTH - 240, 200)

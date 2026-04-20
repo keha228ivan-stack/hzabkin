@@ -52,6 +52,7 @@ OBSTACLE_TYPES = [
     "kid",        # ребенок
     "conveyor",   # конвейер
     "freezer",    # витрина
+    "box",        # коробки (низкое препятствие, можно перепрыгнуть)
 ]
 
 ENEMY_TYPES = ["butcher", "scanner", "robot"]
@@ -97,7 +98,8 @@ class Player:
 
     def jump(self):
         if self.jump_count < self.max_jumps:
-            self.vel_y = -15.5
+            # longer and smoother airtime
+            self.vel_y = -14.0
             self.on_ground = False
             self.jump_count += 1
 
@@ -125,7 +127,7 @@ class Player:
 
         # Jump physics
         if not self.on_ground:
-            self.vel_y += 34.0 * dt
+            self.vel_y += 22.0 * dt
             self.y += self.vel_y
             ground = LANES_Y[self.target_lane]
             if self.y >= ground:
@@ -163,6 +165,8 @@ class Entity:
 
         if etype in ["cart", "shelf", "freezer"]:
             self.w, self.h = 95, 90
+        elif etype == "box":
+            self.w, self.h = 66, 34
         elif etype in ["mop", "scanner"]:
             self.w, self.h = 40, 100
         elif etype in ["kid", "butcher", "robot"]:
@@ -274,6 +278,11 @@ class Game:
         if not self.player:
             return
         p = self.player
+        # Damage sources can hit only on the same lane.
+        # This prevents getting hurt from lower-lane hazards while running on upper lanes.
+        if ent.etype not in POWERUP_TYPES and ent.lane != p.target_lane:
+            return
+
         if ent.rect.colliderect(p.rect):
             if ent.etype in POWERUP_TYPES:
                 p.apply_powerup(ent.etype)
@@ -536,22 +545,31 @@ class Game:
         elif et == "freezer":
             pygame.draw.rect(self.screen, (180, 235, 255), r, border_radius=8)
             pygame.draw.rect(self.screen, WHITE, r, 2, border_radius=8)
+            pygame.draw.rect(self.screen, (140, 198, 240), (r.x + 10, r.y + 16, r.w - 20, 16), border_radius=6)
+        elif et == "box":
+            pygame.draw.rect(self.screen, (214, 156, 88), r, border_radius=6)
+            pygame.draw.rect(self.screen, (190, 134, 66), (r.x + 2, r.y + 2, r.w - 4, r.h - 4), 2, border_radius=6)
+            pygame.draw.line(self.screen, (148, 92, 36), (r.centerx, r.y + 2), (r.centerx, r.bottom - 2), 2)
+            pygame.draw.line(self.screen, (148, 92, 36), (r.x + 4, r.centery), (r.right - 4, r.centery), 2)
 
         elif et == "butcher":
             pygame.draw.rect(self.screen, (255, 255, 255), r, border_radius=10)
             pygame.draw.circle(self.screen, (255, 215, 170), (r.centerx, r.y + 16), 12)
             pygame.draw.circle(self.screen, (80, 80, 80), (r.right - 10, r.y + 24), 10, 2)
             pygame.draw.rect(self.screen, (220, 36, 64), (r.x + 12, r.y + 40, r.w - 24, 10), border_radius=5)
+            pygame.draw.rect(self.screen, (245, 245, 245), (r.x + 8, r.y + 52, r.w - 16, 18), border_radius=4)
         elif et == "scanner":
             pygame.draw.rect(self.screen, PURPLE, r, border_radius=8)
             pygame.draw.rect(self.screen, (255, 120, 170), (r.x + 6, r.y + 10, r.w - 12, 9))
             pulse = int(100 + 80 * (0.5 + 0.5 * math.sin(pygame.time.get_ticks() * 0.03)))
             pygame.draw.rect(self.screen, (255, pulse, pulse), (r.x + 6, r.y + 25, r.w - 12, 7))
+            pygame.draw.circle(self.screen, (220, 220, 255), (r.centerx, r.bottom - 12), 6)
         elif et == "robot":
             pygame.draw.rect(self.screen, (155, 175, 205), r, border_radius=10)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx - 12, r.y + 18), 5)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx + 12, r.y + 18), 5)
             pygame.draw.rect(self.screen, (120, 150, 185), (r.x + 12, r.bottom - 14, r.w - 24, 8), border_radius=4)
+            pygame.draw.rect(self.screen, (80, 106, 132), (r.x + 20, r.y + 36, r.w - 40, 10), border_radius=4)
 
         # Powerups
         elif et == "ketchup":

@@ -14,6 +14,7 @@ class MenuScreen:
         self.player_name = self.save.get("player_name", "")
         self.name_error_timer = 0.0
         self.show_leaderboard = False
+        self.name_max_len = 16
 
     def buy_upgrade(self, name: str):
         lvl = self.save["upgrades"][name]
@@ -35,8 +36,10 @@ class MenuScreen:
             if self.show_leaderboard:
                 return None
 
-            if event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
-                self.selected_sausage = event.key - pygame.K_1
+            if event.key in (pygame.K_a, pygame.K_LEFT):
+                self.selected_sausage = max(0, self.selected_sausage - 1)
+            if event.key in (pygame.K_d, pygame.K_RIGHT):
+                self.selected_sausage = min(len(SAUSAGE_TYPES) - 1, self.selected_sausage + 1)
             if event.key == pygame.K_RETURN:
                 if self.player_name.strip():
                     self.save["player_name"] = self.player_name.strip()
@@ -52,7 +55,7 @@ class MenuScreen:
                 self.buy_upgrade("coin_bonus")
             if event.key == pygame.K_BACKSPACE:
                 self.player_name = self.player_name[:-1]
-            elif event.unicode and event.unicode.isprintable() and len(self.player_name) < 16:
+            elif event.unicode and event.unicode.isprintable() and len(self.player_name) < self.name_max_len:
                 self.player_name += event.unicode
         return action
 
@@ -66,10 +69,21 @@ class MenuScreen:
             return
 
         title = self.big_font.render("Забег Сосисек: Побег из Супермаркета", True, TEXT)
-        self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 42))
+        self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 26))
 
-        subtitle = self.font.render("Представься, выбери сосиску (1-3), ENTER — старт", True, TEXT)
-        self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 108))
+        subtitle = self.font.render("Представься, выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
+        self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 96))
+
+        name_box = pygame.Rect(WIDTH // 2 - 220, 130, 440, 48)
+        pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
+        pygame.draw.rect(self.screen, (140, 140, 170), name_box, 2, border_radius=10)
+        prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
+        self.screen.blit(prompt, (name_box.x + 12, name_box.y - 24))
+        name_text = self.font.render(self.player_name if self.player_name else "введи имя...", True, TEXT if self.player_name else (135, 135, 155))
+        self.screen.blit(name_text, (name_box.x + 14, name_box.y + 8))
+        if self.name_error_timer > 0:
+            warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
+            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 184))
 
         name_box = pygame.Rect(WIDTH // 2 - 220, 140, 440, 48)
         pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
@@ -84,7 +98,7 @@ class MenuScreen:
 
         for i, sausage in enumerate(SAUSAGE_TYPES):
             x = 180 + i * 330
-            y = 200
+            y = 190
             card = pygame.Rect(x, y, 280, 220)
             color = (255, 250, 230) if i == self.selected_sausage else (245, 245, 245)
             pygame.draw.rect(self.screen, color, card, border_radius=16)
@@ -104,16 +118,17 @@ class MenuScreen:
             f"S: Скорость ({up['speed']}/5), цена {30 + up['speed'] * 35}",
             f"C: Бонус монет ({up['coin_bonus']}/5), цена {30 + up['coin_bonus'] * 35}",
             "L или TAB: открыть экран лидерборда",
+            "Выбор сосиски: A/D или ←/→",
             "Управление: W/S (или ←/→), ↑ прыжок, ↓ подкат, свайпы поддерживаются",
         ]
 
-        panel = pygame.Rect(120, 470, WIDTH - 240, 200)
+        panel = pygame.Rect(130, 500, WIDTH - 260, 176)
         pygame.draw.rect(self.screen, (252, 253, 255), panel, border_radius=12)
         pygame.draw.rect(self.screen, (185, 190, 210), panel, 2, border_radius=12)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
-            self.screen.blit(text, (140, 492 + i * 28))
+            self.screen.blit(text, (150, 514 + i * 24))
 
     def draw_leaderboard(self):
         title = self.big_font.render("ЛИДЕРБОРД", True, TEXT)

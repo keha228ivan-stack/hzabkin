@@ -1,4 +1,5 @@
 import math
+import os
 import random
 from datetime import datetime, timezone
 
@@ -50,7 +51,33 @@ class GameScreen:
         self.chaser_timer = 0.0
         self.chaser_x = -260.0
         self.chaser_progress = 0.0
+        self.chaser_cooldown = 0.0
         self.player_name = "Игрок"
+        self.sausage_sprites = self.load_sausage_sprites()
+
+    def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
+        sprite_map: dict[str, list[pygame.Surface]] = {}
+        files = {
+            "Классическая": "assets/sausage_classic.png",
+            "Охотничья": "assets/sausage_hunter.png",
+            "Баварская": "assets/sausage_bavarian.png",
+        }
+        for name, path in files.items():
+            if not os.path.exists(path):
+                continue
+            try:
+                sheet = pygame.image.load(path).convert_alpha()
+                frame_count = 6
+                frame_w = sheet.get_width() // frame_count
+                frames = []
+                for i in range(frame_count):
+                    frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
+                    frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
+                    frames.append(frame)
+                sprite_map[name] = frames
+            except pygame.error:
+                continue
+        return sprite_map
 
     def start_run(self, sausage_index: int, player_name: str = "Игрок"):
         sausage = SAUSAGE_TYPES[sausage_index]
@@ -66,6 +93,7 @@ class GameScreen:
         self.chaser_timer = 0.0
         self.chaser_x = -260.0
         self.chaser_progress = 0.0
+        self.chaser_cooldown = 0.0
         self.player_name = player_name.strip() or "Игрок"
 
     def handle_swipe(self, dx: float, dy: float):
@@ -173,12 +201,17 @@ class GameScreen:
         p.score = int(p.distance) + p.coins * 10
         self.intro_timer = max(0.0, self.intro_timer - dt)
         self.chaser_timer = max(0.0, self.chaser_timer - dt)
+        self.chaser_cooldown = max(0.0, self.chaser_cooldown - dt)
         if self.chaser_timer > 0:
             self.chaser_progress = min(1.0, self.chaser_progress + dt * 1.6)
             target = p.x - 160 + math.sin(pygame.time.get_ticks() * 0.006) * 8
             eased = 1.0 - (1.0 - self.chaser_progress) ** 3
             desired_x = -220 + (target + 220) * eased
             self.chaser_x += (desired_x - self.chaser_x) * min(1.0, dt * 7.5)
+            self.chaser_cooldown = 0.8
+        elif self.chaser_cooldown > 0 or self.chaser_x > -300:
+            retreat_target = -320
+            self.chaser_x += (retreat_target - self.chaser_x) * min(1.0, dt * 3.2)
 
         self.spawn_timer -= dt
         if self.spawn_timer <= 0:
@@ -215,7 +248,7 @@ class GameScreen:
             self.draw_game_over()
 
     def draw_chaser(self):
-        if self.chaser_timer <= 0 or not self.player:
+        if (self.chaser_timer <= 0 and self.chaser_cooldown <= 0 and self.chaser_x <= -305) or not self.player:
             return
         lane_y = LANES_Y[self.player.target_lane]
         x = int(self.chaser_x)
@@ -267,6 +300,14 @@ class GameScreen:
         run_t = pygame.time.get_ticks() * 0.018
         bob = int(math.sin(run_t) * 3)
         body_rect = body_rect.move(0, bob)
+
+        frames = self.sausage_sprites.get(p.sausage.name, [])
+        if frames:
+            frame = frames[int(pygame.time.get_ticks() * 0.015) % len(frames)]
+            scaled = pygame.transform.smoothscale(frame, (body_rect.w + 24, body_rect.h + 30))
+            self.screen.blit(scaled, (body_rect.x - 12, body_rect.y - 18))
+            pygame.draw.ellipse(self.screen, (120, 120, 145), (body_rect.centerx - 28, LANES_Y[p.target_lane] - 4, 56, 12))
+            return
 
         pygame.draw.ellipse(self.screen, (96, 46, 40), body_rect.inflate(8, 8))
         pygame.draw.ellipse(self.screen, p.sausage.color, body_rect)

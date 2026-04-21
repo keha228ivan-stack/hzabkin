@@ -15,7 +15,7 @@ class MenuScreen:
         self.name_error_timer = 0.0
         self.show_leaderboard = False
         self.name_max_len = 16
-        self.name_confirmed = bool(self.player_name.strip())
+        self.name_confirmed = False
 
     def buy_upgrade(self, name: str):
         lvl = self.save["upgrades"][name]
@@ -81,25 +81,26 @@ class MenuScreen:
         title = self.big_font.render("Забег Сосисек: Побег из Супермаркета", True, TEXT)
         self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 26))
 
-        subtitle = self.font.render("Сначала введи имя и нажми ENTER", True, TEXT) if not self.name_confirmed else self.font.render("Выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
+        subtitle = self.font.render("Введи имя и нажми ENTER для подтверждения", True, TEXT) if not self.name_confirmed else self.font.render("Выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
         self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 90))
 
-        name_box = pygame.Rect(WIDTH // 2 - 220, 130, 440, 48)
+        name_box = pygame.Rect(WIDTH // 2 - 280, 128, 560, 50)
         pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
-        pygame.draw.rect(self.screen, (140, 140, 170), name_box, 2, border_radius=10)
+        border_color = (70, 145, 95) if self.name_confirmed else (140, 140, 170)
+        pygame.draw.rect(self.screen, border_color, name_box, 2, border_radius=10)
         prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
-        self.screen.blit(prompt, (name_box.x + 12, name_box.y + 12))
+        self.screen.blit(prompt, (name_box.x + 14, name_box.y + 14))
         shown_name = self.player_name
-        while shown_name and self.font.size(shown_name)[0] > 260:
+        while shown_name and self.font.size(shown_name)[0] > 320:
             shown_name = shown_name[1:]
         name_text = self.font.render(shown_name if shown_name else "введи имя...", True, TEXT if shown_name else (135, 135, 155))
-        self.screen.blit(name_text, (name_box.x + 150, name_box.y + 7))
+        self.screen.blit(name_text, (name_box.x + 180, name_box.y + 8))
         if self.name_confirmed:
-            done = self.small_font.render("✅ Имя подтверждено (E — изменить)", True, (44, 130, 78))
-            self.screen.blit(done, (name_box.right - done.get_width() - 10, name_box.y + 14))
+            done = self.small_font.render("Имя подтверждено. E — изменить", True, (44, 130, 78))
+            self.screen.blit(done, (WIDTH // 2 - done.get_width() // 2, 184))
         if self.name_error_timer > 0:
             warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
-            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 182))
+            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 184))
 
         for i, sausage in enumerate(SAUSAGE_TYPES):
             x = 180 + i * 330

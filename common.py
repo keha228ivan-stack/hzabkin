@@ -192,12 +192,15 @@ def load_save():
             "coin_bonus": 0,
         },
         "best_distance": 0,
+        "leaderboard": [],
     }
     if os.path.exists(SAVE_FILE):
         try:
             with open(SAVE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
             default.update(data)
+            if not isinstance(default.get("leaderboard"), list):
+                default["leaderboard"] = []
         except Exception:
             pass
     return default
@@ -262,7 +265,8 @@ def random_obstacle_or_enemy():
     if roll < 0.36:
         etype = random.choice(ENEMY_TYPES)
         return Entity(etype, lane, WIDTH + 120, speed_mul=random.uniform(0.95, 1.25), is_enemy=True)
-    etype = random.choice(OBSTACLE_TYPES)
+    weighted_obstacles = OBSTACLE_TYPES + ["hanging_sign", "hanging_sign"]
+    etype = random.choice(weighted_obstacles)
     return Entity(etype, lane, WIDTH + 120, speed_mul=random.uniform(0.85, 1.2))
 
 

@@ -135,6 +135,8 @@ class GameScreen:
         p = self.player
         if ent.etype not in POWERUP_TYPES and ent.lane != p.target_lane:
             return
+        if ent.etype == "hanging_sign" and p.sliding:
+            return
 
         if ent.rect.colliderect(p.rect):
             if ent.etype in POWERUP_TYPES:

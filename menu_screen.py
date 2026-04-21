@@ -71,30 +71,22 @@ class MenuScreen:
         title = self.big_font.render("Забег Сосисек: Побег из Супермаркета", True, TEXT)
         self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 26))
 
-        subtitle = self.font.render("Представься, выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
-        self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 96))
+        subtitle = self.font.render("Выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
+        self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 90))
 
         name_box = pygame.Rect(WIDTH // 2 - 220, 130, 440, 48)
         pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
         pygame.draw.rect(self.screen, (140, 140, 170), name_box, 2, border_radius=10)
         prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
-        self.screen.blit(prompt, (name_box.x + 12, name_box.y - 24))
-        name_text = self.font.render(self.player_name if self.player_name else "введи имя...", True, TEXT if self.player_name else (135, 135, 155))
-        self.screen.blit(name_text, (name_box.x + 14, name_box.y + 8))
+        self.screen.blit(prompt, (name_box.x + 12, name_box.y + 12))
+        shown_name = self.player_name
+        while shown_name and self.font.size(shown_name)[0] > 260:
+            shown_name = shown_name[1:]
+        name_text = self.font.render(shown_name if shown_name else "введи имя...", True, TEXT if shown_name else (135, 135, 155))
+        self.screen.blit(name_text, (name_box.x + 150, name_box.y + 7))
         if self.name_error_timer > 0:
             warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
-            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 184))
-
-        name_box = pygame.Rect(WIDTH // 2 - 220, 140, 440, 48)
-        pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
-        pygame.draw.rect(self.screen, (140, 140, 170), name_box, 2, border_radius=10)
-        prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
-        self.screen.blit(prompt, (name_box.x + 12, name_box.y - 24))
-        name_text = self.font.render(self.player_name if self.player_name else "введи имя...", True, TEXT if self.player_name else (135, 135, 155))
-        self.screen.blit(name_text, (name_box.x + 14, name_box.y + 8))
-        if self.name_error_timer > 0:
-            warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
-            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 194))
+            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 182))
 
         for i, sausage in enumerate(SAUSAGE_TYPES):
             x = 180 + i * 330
@@ -122,13 +114,13 @@ class MenuScreen:
             "Управление: W/S (или ←/→), ↑ прыжок, ↓ подкат, свайпы поддерживаются",
         ]
 
-        panel = pygame.Rect(130, 500, WIDTH - 260, 176)
+        panel = pygame.Rect(130, 488, WIDTH - 260, 200)
         pygame.draw.rect(self.screen, (252, 253, 255), panel, border_radius=12)
         pygame.draw.rect(self.screen, (185, 190, 210), panel, 2, border_radius=12)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
-            self.screen.blit(text, (150, 514 + i * 24))
+            self.screen.blit(text, (150, 500 + i * 23))
 
     def draw_leaderboard(self):
         title = self.big_font.render("ЛИДЕРБОРД", True, TEXT)

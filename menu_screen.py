@@ -28,15 +28,6 @@ class MenuScreen:
     def handle_event(self, event: pygame.event.Event):
         action = None
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_l, pygame.K_TAB):
-                self.show_leaderboard = not self.show_leaderboard
-                return None
-            if self.show_leaderboard and event.key == pygame.K_ESCAPE:
-                self.show_leaderboard = False
-                return None
-            if self.show_leaderboard:
-                return None
-
             if not self.name_confirmed:
                 if event.key == pygame.K_RETURN:
                     if self.player_name.strip():
@@ -50,6 +41,15 @@ class MenuScreen:
                     self.player_name = self.player_name[:-1]
                 elif event.unicode and event.unicode.isprintable() and len(self.player_name) < self.name_max_len:
                     self.player_name += event.unicode
+                return None
+
+            if event.key in (pygame.K_l, pygame.K_TAB):
+                self.show_leaderboard = not self.show_leaderboard
+                return None
+            if self.show_leaderboard and event.key == pygame.K_ESCAPE:
+                self.show_leaderboard = False
+                return None
+            if self.show_leaderboard:
                 return None
 
             if event.key == pygame.K_e:

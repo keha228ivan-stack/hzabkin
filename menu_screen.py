@@ -15,6 +15,7 @@ class MenuScreen:
         self.name_error_timer = 0.0
         self.show_leaderboard = False
         self.name_max_len = 16
+        self.name_confirmed = bool(self.player_name.strip())
 
     def buy_upgrade(self, name: str):
         lvl = self.save["upgrades"][name]
@@ -36,27 +37,36 @@ class MenuScreen:
             if self.show_leaderboard:
                 return None
 
+            if not self.name_confirmed:
+                if event.key == pygame.K_RETURN:
+                    if self.player_name.strip():
+                        self.player_name = self.player_name.strip()
+                        self.save["player_name"] = self.player_name
+                        self.name_confirmed = True
+                        save_progress(self.save)
+                    else:
+                        self.name_error_timer = 2.2
+                elif event.key == pygame.K_BACKSPACE:
+                    self.player_name = self.player_name[:-1]
+                elif event.unicode and event.unicode.isprintable() and len(self.player_name) < self.name_max_len:
+                    self.player_name += event.unicode
+                return None
+
+            if event.key == pygame.K_e:
+                self.name_confirmed = False
+                return None
             if event.key in (pygame.K_a, pygame.K_LEFT):
                 self.selected_sausage = max(0, self.selected_sausage - 1)
             if event.key in (pygame.K_d, pygame.K_RIGHT):
                 self.selected_sausage = min(len(SAUSAGE_TYPES) - 1, self.selected_sausage + 1)
             if event.key == pygame.K_RETURN:
-                if self.player_name.strip():
-                    self.save["player_name"] = self.player_name.strip()
-                    save_progress(self.save)
-                    action = "start"
-                else:
-                    self.name_error_timer = 2.2
+                action = "start"
             if event.key == pygame.K_h:
                 self.buy_upgrade("hp")
             if event.key == pygame.K_s:
                 self.buy_upgrade("speed")
             if event.key == pygame.K_c:
                 self.buy_upgrade("coin_bonus")
-            if event.key == pygame.K_BACKSPACE:
-                self.player_name = self.player_name[:-1]
-            elif event.unicode and event.unicode.isprintable() and len(self.player_name) < self.name_max_len:
-                self.player_name += event.unicode
         return action
 
     def update(self, dt: float):
@@ -71,7 +81,7 @@ class MenuScreen:
         title = self.big_font.render("Забег Сосисек: Побег из Супермаркета", True, TEXT)
         self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 26))
 
-        subtitle = self.font.render("Выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
+        subtitle = self.font.render("Сначала введи имя и нажми ENTER", True, TEXT) if not self.name_confirmed else self.font.render("Выбери сосиску (A/D или ←/→), ENTER — старт", True, TEXT)
         self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 90))
 
         name_box = pygame.Rect(WIDTH // 2 - 220, 130, 440, 48)
@@ -84,6 +94,9 @@ class MenuScreen:
             shown_name = shown_name[1:]
         name_text = self.font.render(shown_name if shown_name else "введи имя...", True, TEXT if shown_name else (135, 135, 155))
         self.screen.blit(name_text, (name_box.x + 150, name_box.y + 7))
+        if self.name_confirmed:
+            done = self.small_font.render("✅ Имя подтверждено (E — изменить)", True, (44, 130, 78))
+            self.screen.blit(done, (name_box.right - done.get_width() - 10, name_box.y + 14))
         if self.name_error_timer > 0:
             warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
             self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 182))
@@ -95,6 +108,11 @@ class MenuScreen:
             color = (255, 250, 230) if i == self.selected_sausage else (245, 245, 245)
             pygame.draw.rect(self.screen, color, card, border_radius=16)
             pygame.draw.rect(self.screen, (120, 120, 140), card, 2, border_radius=16)
+            if not self.name_confirmed:
+                pygame.draw.rect(self.screen, (235, 235, 240), card.inflate(-8, -8), border_radius=12)
+                lock = self.small_font.render("Сначала подтвердите имя", True, (110, 110, 125))
+                self.screen.blit(lock, lock.get_rect(center=card.center))
+                continue
 
             pygame.draw.ellipse(self.screen, sausage.color, (x + 70, y + 70, 140, 50))
             name = self.font.render(f"{i + 1}. {sausage.name}", True, TEXT)
@@ -111,16 +129,17 @@ class MenuScreen:
             f"C: Бонус монет ({up['coin_bonus']}/5), цена {30 + up['coin_bonus'] * 35}",
             "L или TAB: открыть экран лидерборда",
             "Выбор сосиски: A/D или ←/→",
+            "E: вернуться к редактированию имени",
             "Управление: W/S (или ←/→), ↑ прыжок, ↓ подкат, свайпы поддерживаются",
         ]
 
-        panel = pygame.Rect(130, 488, WIDTH - 260, 200)
+        panel = pygame.Rect(130, 468, WIDTH - 260, 220)
         pygame.draw.rect(self.screen, (252, 253, 255), panel, border_radius=12)
         pygame.draw.rect(self.screen, (185, 190, 210), panel, 2, border_radius=12)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
-            self.screen.blit(text, (150, 500 + i * 23))
+            self.screen.blit(text, (150, 482 + i * 22))
 
     def draw_leaderboard(self):
         title = self.big_font.render("ЛИДЕРБОРД", True, TEXT)

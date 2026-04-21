@@ -85,6 +85,17 @@ class MenuScreen:
             warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
             self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 184))
 
+        name_box = pygame.Rect(WIDTH // 2 - 220, 140, 440, 48)
+        pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
+        pygame.draw.rect(self.screen, (140, 140, 170), name_box, 2, border_radius=10)
+        prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
+        self.screen.blit(prompt, (name_box.x + 12, name_box.y - 24))
+        name_text = self.font.render(self.player_name if self.player_name else "введи имя...", True, TEXT if self.player_name else (135, 135, 155))
+        self.screen.blit(name_text, (name_box.x + 14, name_box.y + 8))
+        if self.name_error_timer > 0:
+            warn = self.small_font.render("Сначала представься, бро 😎", True, (200, 50, 60))
+            self.screen.blit(warn, (WIDTH // 2 - warn.get_width() // 2, 194))
+
         for i, sausage in enumerate(SAUSAGE_TYPES):
             x = 180 + i * 330
             y = 190

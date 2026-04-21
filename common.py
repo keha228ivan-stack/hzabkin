@@ -49,6 +49,7 @@ OBSTACLE_TYPES = [
     "box",
     "long_box",
     "hanging_sign",
+    "security_bar",
 ]
 ENEMY_TYPES = ["butcher", "scanner", "robot"]
 POWERUP_TYPES = ["ketchup", "mayo", "mustard", "cola", "olive"]
@@ -158,7 +159,7 @@ class Entity:
             self.w, self.h = 66, 34
         elif etype == "long_box":
             self.w, self.h = 170, 38
-        elif etype == "hanging_sign":
+        elif etype in ["hanging_sign", "security_bar"]:
             self.w, self.h = 105, 55
         elif etype in ["mop", "scanner"]:
             self.w, self.h = 40, 100
@@ -171,6 +172,9 @@ class Entity:
 
         if etype == "hanging_sign":
             self.y = LANES_Y[lane] - 36
+        elif etype == "security_bar":
+            self.w, self.h = 132, 46
+            self.y = LANES_Y[lane] - 18
 
     @property
     def rect(self) -> pygame.Rect:

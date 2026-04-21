@@ -94,6 +94,20 @@ class GameScreen:
         p = self.player
         if ent.etype not in POWERUP_TYPES and ent.lane != p.target_lane:
             return
+        if ent.etype in {"hanging_sign", "security_bar"}:
+            x_overlap = abs(ent.x - p.x) < (ent.w + p.w) * 0.45
+            if x_overlap and not p.sliding:
+                if p.invuln_timer > 0:
+                    if ent in self.entities:
+                        self.entities.remove(ent)
+                    return
+                p.hp -= 1
+                p.invuln_timer = 1.2
+                if ent in self.entities:
+                    self.entities.remove(ent)
+                if p.hp <= 0:
+                    self.end_run()
+                return
 
         if ent.rect.colliderect(p.rect):
             if ent.etype in POWERUP_TYPES:
@@ -264,6 +278,14 @@ class GameScreen:
             pygame.draw.line(self.screen, (150, 150, 165), (r.right - 16, r.y - 14), (r.right - 16, r.y), 3)
             low = self.small_font.render("LOW", True, (70, 35, 15))
             self.screen.blit(low, low.get_rect(center=r.center))
+        elif et == "security_bar":
+            pygame.draw.rect(self.screen, (228, 70, 70), r, border_radius=8)
+            pygame.draw.rect(self.screen, (255, 200, 70), (r.x + 6, r.y + 7, r.w - 12, 11), border_radius=4)
+            pygame.draw.rect(self.screen, (255, 200, 70), (r.x + 6, r.y + 25, r.w - 12, 11), border_radius=4)
+            pygame.draw.line(self.screen, (88, 90, 105), (r.x + 10, r.bottom), (r.x + 10, r.bottom + 18), 4)
+            pygame.draw.line(self.screen, (88, 90, 105), (r.right - 10, r.bottom), (r.right - 10, r.bottom + 18), 4)
+            txt = self.small_font.render("SLIDE", True, (45, 20, 20))
+            self.screen.blit(txt, txt.get_rect(center=(r.centerx, r.centery)))
         elif et == "butcher":
             pygame.draw.rect(self.screen, (255, 255, 255), r, border_radius=10)
             pygame.draw.circle(self.screen, (255, 215, 170), (r.centerx, r.y + 16), 12)

@@ -21,7 +21,7 @@ pip install pygame
 ## Запуск
 
 ```bash
-python game.py
+python main.py
 ```
 
 ## Управление

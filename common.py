@@ -192,12 +192,15 @@ def load_save():
             "coin_bonus": 0,
         },
         "best_distance": 0,
+        "leaderboard": [],
     }
     if os.path.exists(SAVE_FILE):
         try:
             with open(SAVE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
             default.update(data)
+            if not isinstance(default.get("leaderboard"), list):
+                default["leaderboard"] = []
         except Exception:
             pass
     return default

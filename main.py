@@ -44,18 +44,20 @@ class App:
 
                 if event.type == pygame.KEYDOWN:
                     if self.state == "menu":
-                        if self.menu.handle_event(event):
-                            self.game.start_run(self.menu.selected_sausage)
+                        action = self.menu.handle_event(event)
+                        if action == "start":
+                            self.game.start_run(self.menu.selected_sausage, self.menu.player_name)
                             self.state = "running"
                     else:
                         action = self.game.handle_keydown(event.key)
                         if action == "menu":
                             self.state = "menu"
                         elif action == "restart":
-                            self.game.start_run(self.menu.selected_sausage)
+                            self.game.start_run(self.menu.selected_sausage, self.menu.player_name)
                             self.state = "running"
 
             if self.state == "menu":
+                self.menu.update(dt)
                 self.menu.draw(pygame.time.get_ticks() / 1000)
             else:
                 self.game.update(dt)

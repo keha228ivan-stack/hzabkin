@@ -1,5 +1,6 @@
 import math
 import random
+from datetime import datetime, timezone
 
 import pygame
 
@@ -44,6 +45,10 @@ class GameScreen:
         self.powerup_timer = 3.0
         self.invuln_flash = False
         self.state = "running"
+        self.intro_timer = 0.0
+        self.recent_hits: list[float] = []
+        self.chaser_timer = 0.0
+        self.chaser_x = -220.0
 
     def start_run(self, sausage_index: int):
         sausage = SAUSAGE_TYPES[sausage_index]
@@ -54,6 +59,10 @@ class GameScreen:
         self.world_speed = self.base_speed + self.save["upgrades"]["speed"] * 28
         self.difficulty = 1.0
         self.state = "running"
+        self.intro_timer = 3.5
+        self.recent_hits = []
+        self.chaser_timer = 0.0
+        self.chaser_x = -220.0
 
     def handle_swipe(self, dx: float, dy: float):
         if self.state != "running" or not self.player:
@@ -111,10 +120,18 @@ class GameScreen:
 
             p.hp -= 1
             p.invuln_timer = 1.2
+            self.register_hit()
             if ent in self.entities:
                 self.entities.remove(ent)
             if p.hp <= 0:
                 self.end_run()
+
+    def register_hit(self):
+        now = pygame.time.get_ticks() / 1000.0
+        self.recent_hits = [t for t in self.recent_hits if now - t <= 3.0]
+        self.recent_hits.append(now)
+        if len(self.recent_hits) >= 2:
+            self.chaser_timer = 2.8
 
     def end_run(self):
         if not self.player:
@@ -122,6 +139,17 @@ class GameScreen:
         money_gain = self.player.coins + int(self.player.distance // 120)
         self.save["money"] += money_gain
         self.save["best_distance"] = max(self.save["best_distance"], int(self.player.distance))
+        board = self.save.setdefault("leaderboard", [])
+        board.append(
+            {
+                "distance": int(self.player.distance),
+                "coins": self.player.coins,
+                "score": self.player.score,
+                "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            }
+        )
+        board.sort(key=lambda row: (row.get("score", 0), row.get("distance", 0)), reverse=True)
+        self.save["leaderboard"] = board[:7]
         save_progress(self.save)
         self.state = "game_over"
 
@@ -138,6 +166,11 @@ class GameScreen:
         p.update(dt)
         p.distance += self.world_speed * dt * 0.25
         p.score = int(p.distance) + p.coins * 10
+        self.intro_timer = max(0.0, self.intro_timer - dt)
+        self.chaser_timer = max(0.0, self.chaser_timer - dt)
+        if self.chaser_timer > 0:
+            target = p.x - 150 + math.sin(pygame.time.get_ticks() * 0.01) * 10
+            self.chaser_x += (target - self.chaser_x) * min(1.0, dt * 3.5)
 
         self.spawn_timer -= dt
         if self.spawn_timer <= 0:
@@ -166,9 +199,53 @@ class GameScreen:
             for ent in sorted(self.entities, key=lambda e: e.y):
                 self.draw_entity(ent)
             self.draw_player()
+            self.draw_chaser()
             self.draw_hud()
+            if self.intro_timer > 0:
+                self.draw_intro_leaderboard()
         else:
             self.draw_game_over()
+
+    def draw_chaser(self):
+        if self.chaser_timer <= 0 or not self.player:
+            return
+        lane_y = LANES_Y[self.player.target_lane]
+        x = int(self.chaser_x)
+        y = int(lane_y - 90)
+
+        sausage_rect = pygame.Rect(x + 62, y + 50, 46, 20)
+        pygame.draw.ellipse(self.screen, (215, 95, 72), sausage_rect)
+        pygame.draw.ellipse(self.screen, (255, 230, 190), sausage_rect.inflate(-18, -9))
+
+        pygame.draw.circle(self.screen, (255, 218, 180), (x + 38, y + 20), 15)
+        pygame.draw.rect(self.screen, (66, 120, 220), (x + 18, y + 36, 42, 44), border_radius=10)
+        leg_phase = math.sin(pygame.time.get_ticks() * 0.02)
+        pygame.draw.line(self.screen, (40, 50, 70), (x + 30, y + 78), (x + 22, y + 98 + int(leg_phase * 4)), 5)
+        pygame.draw.line(self.screen, (40, 50, 70), (x + 48, y + 78), (x + 58, y + 98 - int(leg_phase * 4)), 5)
+        pygame.draw.line(self.screen, (255, 218, 180), (x + 54, y + 44), (x + 74, y + 58), 5)
+        pygame.draw.line(self.screen, (255, 218, 180), (x + 52, y + 48), (x + 70, y + 64), 4)
+        text = self.small_font.render("Отдай сосиску!", True, (40, 40, 40))
+        self.screen.blit(text, (x - 8, y - 24))
+
+    def draw_intro_leaderboard(self):
+        panel = pygame.Rect(WIDTH // 2 - 260, 94, 520, 264)
+        pygame.draw.rect(self.screen, (255, 255, 255), panel, border_radius=16)
+        pygame.draw.rect(self.screen, (170, 170, 190), panel, 2, border_radius=16)
+
+        title = self.font.render("Таблица лидеров перед забегом", True, TEXT)
+        self.screen.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 14))
+        rows = self.save.get("leaderboard", [])[:5]
+        if not rows:
+            hint = self.small_font.render("Пока пусто — этот забег задаст планку!", True, (80, 80, 105))
+            self.screen.blit(hint, (panel.centerx - hint.get_width() // 2, panel.y + 88))
+        else:
+            for i, row in enumerate(rows):
+                line = f"{i + 1}. {row.get('distance', 0)}м  •  {row.get('coins', 0)} мон.  •  счёт {row.get('score', 0)}"
+                txt = self.small_font.render(line, True, TEXT)
+                self.screen.blit(txt, (panel.x + 26, panel.y + 68 + i * 34))
+
+        countdown = self.small_font.render(f"Старт через: {self.intro_timer:.1f}с", True, (90, 90, 120))
+        self.screen.blit(countdown, (panel.centerx - countdown.get_width() // 2, panel.bottom - 34))
 
     def draw_player(self):
         if not self.player:

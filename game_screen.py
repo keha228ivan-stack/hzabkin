@@ -72,6 +72,48 @@ class GameScreen:
             cleaned = cleaned.subsurface(bounds).copy()
         return cleaned
 
+    def extract_frames_from_sheet(self, sheet: pygame.Surface, expected_frames: int = 6) -> list[pygame.Surface]:
+        cleaned_sheet = self.cleanup_sprite_frame(sheet)
+        w, h = cleaned_sheet.get_size()
+        active_columns: list[bool] = []
+        for x in range(w):
+            has_opaque = False
+            for y in range(h):
+                if cleaned_sheet.get_at((x, y))[3] > 0:
+                    has_opaque = True
+                    break
+            active_columns.append(has_opaque)
+
+        segments: list[tuple[int, int]] = []
+        start = None
+        for x, active in enumerate(active_columns):
+            if active and start is None:
+                start = x
+            elif not active and start is not None:
+                if x - start >= 4:
+                    segments.append((start, x))
+                start = None
+        if start is not None and w - start >= 4:
+            segments.append((start, w))
+
+        frames: list[pygame.Surface] = []
+        if len(segments) >= expected_frames:
+            segments = segments[:expected_frames]
+            for sx, ex in segments:
+                part = pygame.Surface((ex - sx, h), pygame.SRCALPHA)
+                part.blit(cleaned_sheet, (0, 0), pygame.Rect(sx, 0, ex - sx, h))
+                frames.append(self.cleanup_sprite_frame(part))
+            return frames
+
+        frame_w = max(1, w // expected_frames)
+        for i in range(expected_frames):
+            left = i * frame_w
+            right = w if i == expected_frames - 1 else min(w, (i + 1) * frame_w)
+            part = pygame.Surface((right - left, h), pygame.SRCALPHA)
+            part.blit(cleaned_sheet, (0, 0), pygame.Rect(left, 0, right - left, h))
+            frames.append(self.cleanup_sprite_frame(part))
+        return frames
+
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
         asset_roots = {
@@ -142,13 +184,7 @@ class GameScreen:
                 sheet = pygame.image.load(sheet_path).convert_alpha()
                 if sheet.get_height() > 420:
                     continue
-                frame_count = 6
-                frame_w = sheet.get_width() // frame_count
-                frames = []
-                for i in range(6):
-                    frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
-                    frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
-                    frames.append(self.cleanup_sprite_frame(frame))
+                frames = self.extract_frames_from_sheet(sheet, expected_frames=6)
                 sprite_map[name] = frames
             except pygame.error:
                 continue

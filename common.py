@@ -250,7 +250,8 @@ def save_progress(save_data):
 def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | None = None):
     global _BG_CACHE, _BG_CACHE_SIZE, _BG_SOURCE
     bg_path = _pick_background_file()
-    if bg_path:
+    using_photo_bg = bool(bg_path)
+    if using_photo_bg:
         if _BG_SOURCE != bg_path:
             _BG_CACHE = None
             _BG_CACHE_SIZE = None
@@ -274,29 +275,32 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
         pygame.draw.rect(screen, (255, 247, 206), (0, 120, WIDTH, 76))
 
     vignette = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    pygame.draw.rect(vignette, (0, 0, 0, 22), (0, 0, WIDTH, HEIGHT), border_radius=0)
+    outer_alpha = 12 if using_photo_bg else 22
+    pygame.draw.rect(vignette, (0, 0, 0, outer_alpha), (0, 0, WIDTH, HEIGHT), border_radius=0)
     pygame.draw.rect(vignette, (0, 0, 0, 0), (24, 12, WIDTH - 48, HEIGHT - 24), border_radius=22)
     screen.blit(vignette, (0, 0))
 
     for i in range(8):
         x = 80 + i * 160
         pulse = 14 + int(4 * math.sin(t * 2.3 + i))
-        pygame.draw.ellipse(screen, (255, 250, 210, 135), (x, 26, 95, pulse))
+        alpha = 92 if using_photo_bg else 135
+        pygame.draw.ellipse(screen, (255, 250, 210, alpha), (x, 26, 95, pulse))
 
-    for i in range(14):
-        y0 = int(HEIGHT * 0.42 + i * 24)
-        shade = max(150, 240 - i * 6)
-        pygame.draw.rect(screen, (shade, shade, shade + 10), (0, y0, WIDTH, 26))
-        if i % 2 == 0:
-            pygame.draw.line(screen, (245, 245, 255), (0, y0 + 2), (WIDTH, y0 + 2), 1)
+    if not using_photo_bg:
+        for i in range(14):
+            y0 = int(HEIGHT * 0.42 + i * 24)
+            shade = max(150, 240 - i * 6)
+            pygame.draw.rect(screen, (shade, shade, shade + 10), (0, y0, WIDTH, 26))
+            if i % 2 == 0:
+                pygame.draw.line(screen, (245, 245, 255), (0, y0 + 2), (WIDTH, y0 + 2), 1)
 
-    for i in range(9):
-        x = i * 220 - (t * 90) % 220
-        pygame.draw.rect(screen, (195, 210, 235), (x, 120, 130, 180), border_radius=12)
-        pygame.draw.rect(screen, (180, 198, 228), (x + 10, 145, 110, 12), border_radius=5)
-        pygame.draw.rect(screen, (180, 198, 228), (x + 10, 200, 110, 12), border_radius=5)
-        for j, color in enumerate([(246, 110, 110), (98, 195, 122), (86, 165, 255), (248, 197, 88)]):
-            pygame.draw.rect(screen, color, (x + 16 + j * 24, 160, 18, 30), border_radius=4)
+        for i in range(9):
+            x = i * 220 - (t * 90) % 220
+            pygame.draw.rect(screen, (195, 210, 235), (x, 120, 130, 180), border_radius=12)
+            pygame.draw.rect(screen, (180, 198, 228), (x + 10, 145, 110, 12), border_radius=5)
+            pygame.draw.rect(screen, (180, 198, 228), (x + 10, 200, 110, 12), border_radius=5)
+            for j, color in enumerate([(246, 110, 110), (98, 195, 122), (86, 165, 255), (248, 197, 88)]):
+                pygame.draw.rect(screen, color, (x + 16 + j * 24, 160, 18, 30), border_radius=4)
 
     lane_bands = [
         ((77, 156, 255), (148, 210, 255)),

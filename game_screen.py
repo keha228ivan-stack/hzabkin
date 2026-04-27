@@ -56,6 +56,7 @@ class GameScreen:
         self.chaser_cooldown = 0.0
         self.player_name = "Игрок"
         self.sausage_sprites = self.load_sausage_sprites()
+        self.shadow_cache: dict[tuple[int, int], pygame.Surface] = {}
 
     def cleanup_sprite_frame(self, frame: pygame.Surface) -> pygame.Surface:
         cleaned = frame.convert_alpha()
@@ -458,8 +459,12 @@ class GameScreen:
         self.screen.blit(txt, txt.get_rect(center=(rect.centerx, rect.centery + 1)))
 
     def draw_entity_shadow(self, rect: pygame.Rect, alpha: int = 75):
-        shadow = pygame.Surface((rect.w + 24, 18), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (20, 24, 38, alpha), (0, 0, rect.w + 24, 18))
+        key = (rect.w, alpha)
+        shadow = self.shadow_cache.get(key)
+        if shadow is None:
+            shadow = pygame.Surface((rect.w + 24, 18), pygame.SRCALPHA)
+            pygame.draw.ellipse(shadow, (20, 24, 38, alpha), (0, 0, rect.w + 24, 18))
+            self.shadow_cache[key] = shadow
         self.screen.blit(shadow, (rect.x - 12, rect.bottom - 6))
 
     def draw_entity(self, ent):

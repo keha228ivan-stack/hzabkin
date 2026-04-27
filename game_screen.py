@@ -44,7 +44,7 @@ class GameScreen:
         self.base_speed = 360.0
         self.world_speed = self.base_speed
         self.difficulty = 1.0
-        self.spawn_timer = 1.2
+        self.spawn_timer = 0.95
         self.powerup_timer = 3.0
         self.invuln_flash = False
         self.state = "running"
@@ -195,7 +195,7 @@ class GameScreen:
         sausage = SAUSAGE_TYPES[sausage_index]
         self.player = Player(sausage, extra_life=self.save["upgrades"]["hp"])
         self.entities = []
-        self.spawn_timer = 1.2
+        self.spawn_timer = 0.95
         self.powerup_timer = 3.0
         self.world_speed = self.base_speed + self.save["upgrades"]["speed"] * 28
         self.difficulty = 1.0
@@ -330,7 +330,7 @@ class GameScreen:
         self.spawn_timer -= dt
         if self.spawn_timer <= 0:
             self.entities.append(random_obstacle_or_enemy())
-            self.spawn_timer = max(0.35, 1.2 - self.difficulty * 0.07)
+            self.spawn_timer = max(0.24, 0.95 - self.difficulty * 0.08)
 
         self.powerup_timer -= dt
         if self.powerup_timer <= 0:

@@ -121,7 +121,7 @@ class SausageType:
 SAUSAGE_TYPES = [
     SausageType("Классическая", (220, 90, 65), "Стандартный баланс"),
     SausageType("Охотничья", (160, 80, 55), "Двойной прыжок"),
-    SausageType("Баварская", (235, 145, 95), "+1 дополнительная жизнь"),
+    SausageType("Баварская", (235, 145, 95), "Плотный прыжок + доп. жизнь"),
 ]
 
 OBSTACLE_TYPES = [
@@ -153,9 +153,10 @@ class Player:
         self.vel_y = 0.0
         self.on_ground = True
         self.jump_count = 0
-        self.max_jumps = 2 if sausage.name == "Охотничья" else 1
+        self.max_jumps = 2 if sausage.name in ("Охотничья", "Баварская") else 1
         self.sliding = False
         self.slide_timer = 0.0
+        self.float_timer = 0.0
 
         self.max_hp = 3 + extra_life
         self.hp = self.max_hp
@@ -177,7 +178,15 @@ class Player:
 
     def jump(self):
         if self.jump_count < self.max_jumps:
-            self.vel_y = -16.8
+            is_second_jump = self.jump_count == 1
+            jump_impulse = -15.2
+            if self.sausage.name == "Охотничья":
+                jump_impulse = -16.0 if is_second_jump else -15.5
+            elif self.sausage.name == "Баварская":
+                jump_impulse = -16.2 if not is_second_jump else -18.2
+                if is_second_jump:
+                    self.float_timer = 0.22
+            self.vel_y = jump_impulse
             self.on_ground = False
             self.jump_count += 1
 
@@ -203,7 +212,9 @@ class Player:
         self.y += (target_y - self.y) * min(1.0, 10 * dt)
 
         if not self.on_ground:
-            self.vel_y += 17.0 * dt
+            gravity = 11.6 if self.float_timer > 0 else 13.8
+            self.float_timer = max(0.0, self.float_timer - dt)
+            self.vel_y += gravity * dt
             self.y += self.vel_y
             ground = LANES_Y[self.target_lane]
             if self.y >= ground:
@@ -211,6 +222,7 @@ class Player:
                 self.vel_y = 0
                 self.on_ground = True
                 self.jump_count = 0
+                self.float_timer = 0.0
 
         if self.sliding:
             self.slide_timer -= dt

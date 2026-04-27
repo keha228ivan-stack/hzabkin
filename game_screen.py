@@ -57,6 +57,21 @@ class GameScreen:
         self.player_name = "Игрок"
         self.sausage_sprites = self.load_sausage_sprites()
 
+    def cleanup_sprite_frame(self, frame: pygame.Surface) -> pygame.Surface:
+        cleaned = frame.convert_alpha()
+        w, h = cleaned.get_size()
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = cleaned.get_at((x, y))
+                if a == 0:
+                    continue
+                if r > 226 and g > 226 and b > 226 and max(r, g, b) - min(r, g, b) < 22:
+                    cleaned.set_at((x, y), (r, g, b, 0))
+        bounds = cleaned.get_bounding_rect(min_alpha=1)
+        if bounds.w > 0 and bounds.h > 0:
+            cleaned = cleaned.subsurface(bounds).copy()
+        return cleaned
+
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
         asset_roots = {
@@ -115,7 +130,8 @@ class GameScreen:
                     for i in range(1, 7):
                         frame_path = os.path.join(folder_path, f"{i}.png")
                         if os.path.exists(frame_path):
-                            frames.append(pygame.image.load(frame_path).convert_alpha())
+                            loaded = pygame.image.load(frame_path).convert_alpha()
+                            frames.append(self.cleanup_sprite_frame(loaded))
 
                 if len(frames) == 6:
                     sprite_map[name] = frames
@@ -132,7 +148,7 @@ class GameScreen:
                 for i in range(6):
                     frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
                     frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
-                    frames.append(frame)
+                    frames.append(self.cleanup_sprite_frame(frame))
                 sprite_map[name] = frames
             except pygame.error:
                 continue

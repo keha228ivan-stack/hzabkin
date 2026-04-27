@@ -44,7 +44,7 @@ class GameScreen:
         self.base_speed = 360.0
         self.world_speed = self.base_speed
         self.difficulty = 1.0
-        self.spawn_timer = 1.2
+        self.spawn_timer = 0.95
         self.powerup_timer = 3.0
         self.invuln_flash = False
         self.state = "running"
@@ -56,6 +56,7 @@ class GameScreen:
         self.chaser_cooldown = 0.0
         self.player_name = "Игрок"
         self.sausage_sprites = self.load_sausage_sprites()
+        self.shadow_cache: dict[tuple[int, int], pygame.Surface] = {}
 
     def cleanup_sprite_frame(self, frame: pygame.Surface) -> pygame.Surface:
         cleaned = frame.convert_alpha()
@@ -194,7 +195,7 @@ class GameScreen:
         sausage = SAUSAGE_TYPES[sausage_index]
         self.player = Player(sausage, extra_life=self.save["upgrades"]["hp"])
         self.entities = []
-        self.spawn_timer = 1.2
+        self.spawn_timer = 0.95
         self.powerup_timer = 3.0
         self.world_speed = self.base_speed + self.save["upgrades"]["speed"] * 28
         self.difficulty = 1.0
@@ -248,8 +249,13 @@ class GameScreen:
             return
         if ent.etype == "hanging_sign" and p.sliding:
             return
+        p_rect = p.rect
+        ent_rect = ent.rect
 
-        if ent.rect.colliderect(p.rect):
+        if ent.etype in {"box", "conveyor", "long_box"} and p_rect.bottom <= ent_rect.top + 8:
+            return
+
+        if ent_rect.colliderect(p_rect):
             if ent.etype in POWERUP_TYPES:
                 p.apply_powerup(ent.etype)
                 if ent.etype != "olive":
@@ -329,7 +335,7 @@ class GameScreen:
         self.spawn_timer -= dt
         if self.spawn_timer <= 0:
             self.entities.append(random_obstacle_or_enemy())
-            self.spawn_timer = max(0.35, 1.2 - self.difficulty * 0.07)
+            self.spawn_timer = max(0.24, 0.95 - self.difficulty * 0.08)
 
         self.powerup_timer -= dt
         if self.powerup_timer <= 0:
@@ -457,13 +463,24 @@ class GameScreen:
         txt = self.small_font.render(label, True, (25, 25, 30))
         self.screen.blit(txt, txt.get_rect(center=(rect.centerx, rect.centery + 1)))
 
+    def draw_entity_shadow(self, rect: pygame.Rect, alpha: int = 75):
+        key = (rect.w, alpha)
+        shadow = self.shadow_cache.get(key)
+        if shadow is None:
+            shadow = pygame.Surface((rect.w + 24, 18), pygame.SRCALPHA)
+            pygame.draw.ellipse(shadow, (20, 24, 38, alpha), (0, 0, rect.w + 24, 18))
+            self.shadow_cache[key] = shadow
+        self.screen.blit(shadow, (rect.x - 12, rect.bottom - 6))
+
     def draw_entity(self, ent):
         r = ent.rect
         et = ent.etype
+        self.draw_entity_shadow(r)
 
         if et == "cart":
-            pygame.draw.rect(self.screen, (122, 138, 165), r, border_radius=10)
-            pygame.draw.rect(self.screen, (198, 214, 240), r.inflate(-10, -22), border_radius=8)
+            pygame.draw.rect(self.screen, (106, 122, 152), r, border_radius=12)
+            pygame.draw.rect(self.screen, (212, 226, 248), r.inflate(-10, -20), border_radius=10)
+            pygame.draw.rect(self.screen, (255, 255, 255, 80), (r.x + 8, r.y + 6, r.w - 16, 16), border_radius=8)
             for col in range(3):
                 x = r.x + 14 + col * 24
                 pygame.draw.line(self.screen, (160, 180, 205), (x, r.y + 12), (x, r.bottom - 26), 2)
@@ -471,12 +488,14 @@ class GameScreen:
             pygame.draw.circle(self.screen, (44, 44, 54), (r.x + 18, r.bottom), 8)
             pygame.draw.circle(self.screen, (44, 44, 54), (r.right - 18, r.bottom), 8)
         elif et == "mop":
-            pygame.draw.rect(self.screen, (182, 138, 84), (r.centerx - 4, r.y, 8, r.h - 14), border_radius=3)
-            pygame.draw.rect(self.screen, (80, 165, 255), (r.centerx - 20, r.bottom - 16, 40, 12), border_radius=6)
+            pygame.draw.rect(self.screen, (170, 126, 76), (r.centerx - 4, r.y, 8, r.h - 14), border_radius=3)
+            pygame.draw.rect(self.screen, (63, 149, 246), (r.centerx - 20, r.bottom - 16, 40, 12), border_radius=6)
+            pygame.draw.rect(self.screen, (120, 196, 255), (r.centerx - 16, r.bottom - 13, 32, 4), border_radius=3)
             for i in range(5):
                 pygame.draw.line(self.screen, (205, 235, 255), (r.centerx - 18 + i * 8, r.bottom - 3), (r.centerx - 14 + i * 8, r.bottom + 8), 2)
         elif et == "shelf":
-            pygame.draw.rect(self.screen, (190, 120, 65), r, border_radius=6)
+            pygame.draw.rect(self.screen, (176, 104, 52), r, border_radius=8)
+            pygame.draw.rect(self.screen, (202, 140, 88), (r.x + 4, r.y + 4, r.w - 8, 14), border_radius=6)
             for i, c in enumerate([(240, 220, 90), (95, 210, 140), (255, 130, 130)]):
                 pygame.draw.rect(self.screen, c, (r.x + 6, r.y + 14 + i * 24, r.w - 12, 12), border_radius=4)
                 for j in range(4):
@@ -498,13 +517,22 @@ class GameScreen:
             pygame.draw.rect(self.screen, WHITE, r, 2, border_radius=8)
             pygame.draw.rect(self.screen, (140, 198, 240), (r.x + 8, r.y + 14, r.w - 16, r.h - 22), border_radius=6)
             pygame.draw.line(self.screen, WHITE, (r.x + 14, r.y + 20), (r.right - 14, r.bottom - 14), 2)
+            snow = 4 + int(2 * abs(math.sin(pygame.time.get_ticks() * 0.003)))
+            for i in range(snow):
+                pygame.draw.circle(self.screen, (235, 248, 255), (r.x + 16 + i * 14, r.y + 10), 2)
         elif et == "box":
-            pygame.draw.rect(self.screen, (214, 156, 88), r, border_radius=6)
+            pygame.draw.rect(self.screen, (208, 148, 80), r, border_radius=6)
+            pygame.draw.polygon(
+                self.screen,
+                (230, 178, 112),
+                [(r.x + 4, r.y + 4), (r.right - 4, r.y + 4), (r.right - 10, r.y + 12), (r.x + 10, r.y + 12)],
+            )
             pygame.draw.rect(self.screen, (190, 134, 66), r.inflate(-4, -4), 2, border_radius=6)
             pygame.draw.line(self.screen, (148, 92, 36), (r.centerx, r.y + 2), (r.centerx, r.bottom - 2), 2)
             pygame.draw.line(self.screen, (148, 92, 36), (r.x + 4, r.centery), (r.right - 4, r.centery), 2)
         elif et == "long_box":
-            pygame.draw.rect(self.screen, (220, 162, 94), r, border_radius=6)
+            pygame.draw.rect(self.screen, (214, 155, 88), r, border_radius=6)
+            pygame.draw.rect(self.screen, (232, 178, 114), (r.x + 4, r.y + 4, r.w - 8, 8), border_radius=4)
             seg = r.w // 3
             for i in range(3):
                 sx = r.x + i * seg
@@ -521,15 +549,20 @@ class GameScreen:
             pygame.draw.circle(self.screen, (255, 215, 170), (r.centerx, r.y + 16), 12)
             pygame.draw.rect(self.screen, (220, 36, 64), (r.x + 12, r.y + 40, r.w - 24, 10), border_radius=5)
             pygame.draw.circle(self.screen, (80, 80, 80), (r.right - 11, r.y + 25), 9, 2)
+            pygame.draw.rect(self.screen, (255, 210, 220), (r.x + 12, r.y + 56, r.w - 24, 6), border_radius=3)
         elif et == "scanner":
             pygame.draw.rect(self.screen, PURPLE, r, border_radius=8)
             pulse = int(120 + 100 * (0.5 + 0.5 * math.sin(pygame.time.get_ticks() * 0.03)))
             pygame.draw.rect(self.screen, (255, pulse, pulse), (r.x + 6, r.y + 25, r.w - 12, 8), border_radius=3)
+            pygame.draw.rect(self.screen, (255, 255, 255, 75), (r.x + 6, r.y + 7, r.w - 12, 8), border_radius=4)
         elif et == "robot":
             pygame.draw.rect(self.screen, (155, 175, 205), r, border_radius=10)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx - 12, r.y + 18), 5)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx + 12, r.y + 18), 5)
             pygame.draw.rect(self.screen, (120, 150, 185), (r.x + 12, r.bottom - 14, r.w - 24, 8), border_radius=4)
+            antenna = r.y - 8 + int(math.sin(pygame.time.get_ticks() * 0.008) * 2)
+            pygame.draw.line(self.screen, (95, 110, 135), (r.centerx, r.y + 2), (r.centerx, antenna), 2)
+            pygame.draw.circle(self.screen, (255, 120, 120), (r.centerx, antenna), 3)
         elif et == "ketchup":
             self.draw_sauce_packet(r, (228, 84, 70), (245, 203, 190), "K")
         elif et == "mayo":
@@ -541,6 +574,8 @@ class GameScreen:
         elif et == "olive":
             self.draw_sauce_packet(r, (96, 198, 118), (190, 237, 196), "+")
 
+        if et in POWERUP_TYPES:
+            pygame.draw.ellipse(self.screen, (255, 255, 255, 90), (r.x + 6, r.y + 4, r.w - 12, 10))
         pygame.draw.rect(self.screen, (30, 30, 45), r, 2, border_radius=8)
 
     def draw_hud(self):

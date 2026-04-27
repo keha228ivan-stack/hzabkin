@@ -46,10 +46,26 @@ python main.py
 
 ## Спрайты сосисок (PNG)
 
-Чтобы использовать анимации из PNG, положите спрайт-листы (по 6 кадров в одну строку) в:
+Чтобы использовать анимации из PNG, можно использовать любой формат:
+
+1) Спрайт-лист (6 кадров в одну строку):
 
 - `assets/sausage_classic.png`
 - `assets/sausage_hunter.png`
 - `assets/sausage_bavarian.png`
+
+2) Или папки с уже нарезанными кадрами `1.png ... 6.png`:
+
+- `assets/sausage_classic/1.png ... 6.png`
+- `assets/sausage_hunter/1.png ... 6.png`
+- `assets/sausage_bavarian/1.png ... 6.png`
+
+## Кастомный фон
+
+Чтобы включить фон из скрина, положите изображение в:
+
+- `assets/store_shelf_bg.png`
+
+Игра автоматически подхватит его как основной задний фон.
 
 Прогресс сохраняется в `save_data.json`.

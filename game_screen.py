@@ -23,6 +23,7 @@ from common import (
     YELLOW,
     Player,
     draw_background,
+    draw_glass_panel,
     random_obstacle_or_enemy,
     random_powerup,
     save_progress,
@@ -58,19 +59,29 @@ class GameScreen:
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
         files = {
-            "Классическая": "assets/sausage_classic.png",
-            "Охотничья": "assets/sausage_hunter.png",
-            "Баварская": "assets/sausage_bavarian.png",
+            "Классическая": ("assets/sausage_classic", "assets/sausage_classic.png"),
+            "Охотничья": ("assets/sausage_hunter", "assets/sausage_hunter.png"),
+            "Баварская": ("assets/sausage_bavarian", "assets/sausage_bavarian.png"),
         }
-        for name, path in files.items():
-            if not os.path.exists(path):
-                continue
+        for name, (folder_path, sheet_path) in files.items():
             try:
-                sheet = pygame.image.load(path).convert_alpha()
-                frame_count = 6
-                frame_w = sheet.get_width() // frame_count
+                frames: list[pygame.Surface] = []
+                if os.path.isdir(folder_path):
+                    for i in range(1, 7):
+                        frame_path = os.path.join(folder_path, f"{i}.png")
+                        if os.path.exists(frame_path):
+                            frames.append(pygame.image.load(frame_path).convert_alpha())
+
+                if len(frames) == 6:
+                    sprite_map[name] = frames
+                    continue
+
+                if not os.path.exists(sheet_path):
+                    continue
+                sheet = pygame.image.load(sheet_path).convert_alpha()
+                frame_w = sheet.get_width() // 6
                 frames = []
-                for i in range(frame_count):
+                for i in range(6):
                     frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
                     frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
                     frames.append(frame)
@@ -272,8 +283,7 @@ class GameScreen:
 
     def draw_intro_leaderboard(self):
         panel = pygame.Rect(WIDTH // 2 - 260, 94, 520, 264)
-        pygame.draw.rect(self.screen, (255, 255, 255), panel, border_radius=16)
-        pygame.draw.rect(self.screen, (170, 170, 190), panel, 2, border_radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
 
         title = self.font.render("Таблица лидеров перед забегом", True, TEXT)
         self.screen.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 14))
@@ -437,7 +447,8 @@ class GameScreen:
         if not self.player:
             return
         p = self.player
-        pygame.draw.rect(self.screen, (255, 255, 255, 180), (16, 16, 430, 110), border_radius=12)
+        hud_rect = pygame.Rect(16, 16, 430, 110)
+        draw_glass_panel(self.screen, hud_rect, fill=(255, 255, 255, 208), border=(170, 184, 220), radius=12)
         self.screen.blit(self.font.render(f"Дистанция: {int(p.distance)} м", True, TEXT), (28, 24))
         self.screen.blit(self.font.render(f"Монеты: {p.coins}", True, TEXT), (28, 56))
         self.screen.blit(self.font.render(f"Сочность: {p.hp}/{p.max_hp}", True, TEXT), (28, 88))
@@ -456,7 +467,8 @@ class GameScreen:
         for text, color in tags:
             s = self.small_font.render(text, True, (20, 20, 20))
             w = s.get_width() + 24
-            pygame.draw.rect(self.screen, color, (x, 20, w, 30), border_radius=14)
+            tag_rect = pygame.Rect(x, 20, w, 30)
+            draw_glass_panel(self.screen, tag_rect, fill=(*color, 230), border=(96, 108, 138), radius=14)
             self.screen.blit(s, (x + 12, 26))
             x += w + 8
 
@@ -471,8 +483,7 @@ class GameScreen:
             "ENTER — еще один забег, ESC — в меню",
         ]
         box = pygame.Rect(WIDTH // 2 - 330, HEIGHT // 2 - 180, 660, 320)
-        pygame.draw.rect(self.screen, (255, 255, 255), box, border_radius=18)
-        pygame.draw.rect(self.screen, (160, 160, 180), box, 3, border_radius=18)
+        draw_glass_panel(self.screen, box, fill=(255, 255, 255, 232), border=(160, 160, 180), radius=18)
         for i, line in enumerate(lines):
             font = self.big_font if i == 0 else self.font
             txt = font.render(line, True, TEXT)

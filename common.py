@@ -12,6 +12,7 @@ GROUND_Y = HEIGHT - 140
 LANES_Y = [GROUND_Y - 10, GROUND_Y - 70, GROUND_Y - 130]
 PLAYER_X = 220
 SAVE_FILE = "save_data.json"
+BACKGROUND_FILE = "assets/store_shelf_bg.png"
 
 SKY = (255, 236, 170)
 STORE_BG = (236, 246, 255)
@@ -24,6 +25,8 @@ BLUE = (60, 145, 255)
 YELLOW = (255, 210, 70)
 PURPLE = (165, 95, 245)
 ORANGE = (255, 145, 55)
+_BG_CACHE: pygame.Surface | None = None
+_BG_CACHE_SIZE: tuple[int, int] | None = None
 
 
 @dataclass
@@ -212,13 +215,35 @@ def save_progress(save_data):
 
 
 def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | None = None):
-    screen.fill(STORE_BG)
-    pygame.draw.rect(screen, (255, 222, 150), (0, 0, WIDTH, 140))
-    pygame.draw.rect(screen, (255, 235, 180), (0, 120, WIDTH, 70))
+    global _BG_CACHE, _BG_CACHE_SIZE
+    if os.path.exists(BACKGROUND_FILE):
+        if _BG_CACHE is None or _BG_CACHE_SIZE != (WIDTH, HEIGHT):
+            loaded = pygame.image.load(BACKGROUND_FILE).convert()
+            _BG_CACHE = pygame.transform.smoothscale(loaded, (WIDTH, HEIGHT))
+            _BG_CACHE_SIZE = (WIDTH, HEIGHT)
+        drift_x = int(math.sin(t * 0.12) * 8)
+        screen.blit(_BG_CACHE, (drift_x, 0))
+    else:
+        screen.fill(STORE_BG)
+        sky_grad = pygame.Surface((WIDTH, 210), pygame.SRCALPHA)
+        for y in range(210):
+            mix = y / 210
+            r = int(255 - 12 * mix)
+            g = int(238 - 42 * mix)
+            b = int(180 + 35 * mix)
+            pygame.draw.line(sky_grad, (r, g, b, 255), (0, y), (WIDTH, y))
+        screen.blit(sky_grad, (0, 0))
+        pygame.draw.rect(screen, (255, 247, 206), (0, 120, WIDTH, 76))
+
+    vignette = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    pygame.draw.rect(vignette, (0, 0, 0, 22), (0, 0, WIDTH, HEIGHT), border_radius=0)
+    pygame.draw.rect(vignette, (0, 0, 0, 0), (24, 12, WIDTH - 48, HEIGHT - 24), border_radius=22)
+    screen.blit(vignette, (0, 0))
+
     for i in range(8):
         x = 80 + i * 160
         pulse = 14 + int(4 * math.sin(t * 2.3 + i))
-        pygame.draw.ellipse(screen, (255, 250, 210), (x, 26, 95, pulse))
+        pygame.draw.ellipse(screen, (255, 250, 210, 135), (x, 26, 95, pulse))
 
     for i in range(14):
         y0 = int(HEIGHT * 0.42 + i * 24)
@@ -250,13 +275,26 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
     if highlighted_lane is not None:
         ly = LANES_Y[highlighted_lane]
         overlay = pygame.Surface((WIDTH, 56), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 40))
+        overlay.fill((255, 255, 255, 52))
         screen.blit(overlay, (0, ly - 52))
 
     for i in range(18):
         sx = int((i * 80 + t * 55) % WIDTH)
         sy = 180 + int(16 * math.sin(t * 1.8 + i))
         pygame.draw.circle(screen, (255, 255, 255), (sx, sy), 1)
+
+
+def draw_glass_panel(screen: pygame.Surface, rect: pygame.Rect, fill=(255, 255, 255, 205), border=(170, 185, 220), radius: int = 16):
+    shadow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
+    pygame.draw.rect(shadow, (34, 41, 68, 70), (6, 6, rect.w, rect.h), border_radius=radius + 3)
+    screen.blit(shadow, (rect.x - 6, rect.y - 2))
+
+    glass = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(glass, fill, (0, 0, rect.w, rect.h), border_radius=radius)
+    highlight_h = max(24, rect.h // 3)
+    pygame.draw.rect(glass, (255, 255, 255, 68), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
+    pygame.draw.rect(glass, border, (0, 0, rect.w, rect.h), 2, border_radius=radius)
+    screen.blit(glass, rect.topleft)
 
 
 def random_obstacle_or_enemy():

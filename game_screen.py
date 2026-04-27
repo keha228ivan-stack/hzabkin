@@ -457,9 +457,15 @@ class GameScreen:
         txt = self.small_font.render(label, True, (25, 25, 30))
         self.screen.blit(txt, txt.get_rect(center=(rect.centerx, rect.centery + 1)))
 
+    def draw_entity_shadow(self, rect: pygame.Rect, alpha: int = 75):
+        shadow = pygame.Surface((rect.w + 24, 18), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (20, 24, 38, alpha), (0, 0, rect.w + 24, 18))
+        self.screen.blit(shadow, (rect.x - 12, rect.bottom - 6))
+
     def draw_entity(self, ent):
         r = ent.rect
         et = ent.etype
+        self.draw_entity_shadow(r)
 
         if et == "cart":
             pygame.draw.rect(self.screen, (106, 122, 152), r, border_radius=12)
@@ -501,6 +507,9 @@ class GameScreen:
             pygame.draw.rect(self.screen, WHITE, r, 2, border_radius=8)
             pygame.draw.rect(self.screen, (140, 198, 240), (r.x + 8, r.y + 14, r.w - 16, r.h - 22), border_radius=6)
             pygame.draw.line(self.screen, WHITE, (r.x + 14, r.y + 20), (r.right - 14, r.bottom - 14), 2)
+            snow = 4 + int(2 * abs(math.sin(pygame.time.get_ticks() * 0.003)))
+            for i in range(snow):
+                pygame.draw.circle(self.screen, (235, 248, 255), (r.x + 16 + i * 14, r.y + 10), 2)
         elif et == "box":
             pygame.draw.rect(self.screen, (208, 148, 80), r, border_radius=6)
             pygame.draw.polygon(
@@ -530,15 +539,20 @@ class GameScreen:
             pygame.draw.circle(self.screen, (255, 215, 170), (r.centerx, r.y + 16), 12)
             pygame.draw.rect(self.screen, (220, 36, 64), (r.x + 12, r.y + 40, r.w - 24, 10), border_radius=5)
             pygame.draw.circle(self.screen, (80, 80, 80), (r.right - 11, r.y + 25), 9, 2)
+            pygame.draw.rect(self.screen, (255, 210, 220), (r.x + 12, r.y + 56, r.w - 24, 6), border_radius=3)
         elif et == "scanner":
             pygame.draw.rect(self.screen, PURPLE, r, border_radius=8)
             pulse = int(120 + 100 * (0.5 + 0.5 * math.sin(pygame.time.get_ticks() * 0.03)))
             pygame.draw.rect(self.screen, (255, pulse, pulse), (r.x + 6, r.y + 25, r.w - 12, 8), border_radius=3)
+            pygame.draw.rect(self.screen, (255, 255, 255, 75), (r.x + 6, r.y + 7, r.w - 12, 8), border_radius=4)
         elif et == "robot":
             pygame.draw.rect(self.screen, (155, 175, 205), r, border_radius=10)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx - 12, r.y + 18), 5)
             pygame.draw.circle(self.screen, (90, 120, 255), (r.centerx + 12, r.y + 18), 5)
             pygame.draw.rect(self.screen, (120, 150, 185), (r.x + 12, r.bottom - 14, r.w - 24, 8), border_radius=4)
+            antenna = r.y - 8 + int(math.sin(pygame.time.get_ticks() * 0.008) * 2)
+            pygame.draw.line(self.screen, (95, 110, 135), (r.centerx, r.y + 2), (r.centerx, antenna), 2)
+            pygame.draw.circle(self.screen, (255, 120, 120), (r.centerx, antenna), 3)
         elif et == "ketchup":
             self.draw_sauce_packet(r, (228, 84, 70), (245, 203, 190), "K")
         elif et == "mayo":

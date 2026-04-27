@@ -249,8 +249,28 @@ class GameScreen:
             return
         if ent.etype == "hanging_sign" and p.sliding:
             return
+        p_rect = p.rect
+        ent_rect = ent.rect
 
-        if ent.rect.colliderect(p.rect):
+        if ent.etype in {"box", "conveyor"} and p_rect.bottom <= ent_rect.top + 7:
+            return
+
+        if ent.etype == "long_box":
+            overlap_x = min(p_rect.right, ent_rect.right) - max(p_rect.left, ent_rect.left)
+            if overlap_x > 14 and p_rect.bottom >= ent_rect.top - 34:
+                if p.invuln_timer <= 0:
+                    p.hp -= 1
+                    p.invuln_timer = 1.2
+                    self.register_hit()
+                    if ent in self.entities:
+                        self.entities.remove(ent)
+                    if p.hp <= 0:
+                        self.end_run()
+                elif ent in self.entities:
+                    self.entities.remove(ent)
+                return
+
+        if ent_rect.colliderect(p_rect):
             if ent.etype in POWERUP_TYPES:
                 p.apply_powerup(ent.etype)
                 if ent.etype != "olive":

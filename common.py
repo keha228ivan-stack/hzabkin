@@ -179,13 +179,13 @@ class Player:
     def jump(self):
         if self.jump_count < self.max_jumps:
             is_second_jump = self.jump_count == 1
-            jump_impulse = -15.2
+            jump_impulse = -17.0
             if self.sausage.name == "Охотничья":
-                jump_impulse = -16.0 if is_second_jump else -15.5
+                jump_impulse = -17.4 if not is_second_jump else -18.2
             elif self.sausage.name == "Баварская":
-                jump_impulse = -16.2 if not is_second_jump else -18.2
+                jump_impulse = -17.1 if not is_second_jump else -18.8
                 if is_second_jump:
-                    self.float_timer = 0.22
+                    self.float_timer = 0.18
             self.vel_y = jump_impulse
             self.on_ground = False
             self.jump_count += 1
@@ -212,7 +212,7 @@ class Player:
         self.y += (target_y - self.y) * min(1.0, 10 * dt)
 
         if not self.on_ground:
-            gravity = 11.6 if self.float_timer > 0 else 13.8
+            gravity = 12.0 if self.float_timer > 0 else 14.4
             self.float_timer = max(0.0, self.float_timer - dt)
             self.vel_y += gravity * dt
             self.y += self.vel_y

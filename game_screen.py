@@ -129,7 +129,7 @@ class GameScreen:
                 frame_count = 6
                 frame_w = sheet.get_width() // frame_count
                 frames = []
-                for i in range(frame_count):
+                for i in range(6):
                     frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
                     frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
                     frames.append(frame)

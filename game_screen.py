@@ -1,6 +1,7 @@
 import math
 import os
 import random
+from pathlib import Path
 from datetime import datetime, timezone
 
 import pygame
@@ -23,6 +24,7 @@ from common import (
     YELLOW,
     Player,
     draw_background,
+    draw_glass_panel,
     random_obstacle_or_enemy,
     random_powerup,
     save_progress,
@@ -57,16 +59,73 @@ class GameScreen:
 
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
-        files = {
-            "Классическая": "assets/sausage_classic.png",
-            "Охотничья": "assets/sausage_hunter.png",
-            "Баварская": "assets/sausage_bavarian.png",
+        asset_roots = {
+            "Классическая": ("classic", "klass", "класс", "3"),
+            "Охотничья": ("hunter", "hunt", "охот", "2"),
+            "Баварская": ("bavarian", "bavar", "бавар", "1"),
         }
-        for name, path in files.items():
-            if not os.path.exists(path):
-                continue
+        fallback_order = ["Баварская", "Охотничья", "Классическая"]
+        generic_sprite_sheets: list[str] = []
+        if os.path.isdir("assets"):
+            for path in Path("assets").glob("*.png"):
+                lower = path.stem.lower()
+                if any(token in lower for token in ("bg", "background", "store", "shelf", "фон")):
+                    continue
+                try:
+                    img = pygame.image.load(str(path))
+                except pygame.error:
+                    continue
+                w, h = img.get_size()
+                if h <= 420 and w >= h * 4.5:
+                    generic_sprite_sheets.append(str(path))
+        generic_sprite_sheets.sort()
+
+        for name, aliases in asset_roots.items():
             try:
-                sheet = pygame.image.load(path).convert_alpha()
+                frames: list[pygame.Surface] = []
+                folder_candidates = [
+                    f"assets/sausage_{aliases[0]}",
+                    f"assets/{aliases[0]}",
+                    f"assets/{aliases[-1]}",
+                ]
+                sheet_candidates = [
+                    f"assets/sausage_{aliases[0]}.png",
+                    f"assets/{aliases[0]}.png",
+                    f"assets/{aliases[-1]}.png",
+                ]
+
+                for path in Path("assets").glob("*.png"):
+                    lower = path.stem.lower()
+                    if any(alias in lower for alias in aliases):
+                        sheet_candidates.insert(0, str(path))
+
+                if name in fallback_order:
+                    idx = fallback_order.index(name)
+                    if idx < len(generic_sprite_sheets):
+                        sheet_candidates.append(generic_sprite_sheets[idx])
+                for path in Path("assets").glob("*"):
+                    if path.is_dir():
+                        lower = path.name.lower()
+                        if any(alias in lower for alias in aliases):
+                            folder_candidates.insert(0, str(path))
+
+                folder_path = next((p for p in folder_candidates if os.path.isdir(p)), None)
+                sheet_path = next((p for p in sheet_candidates if os.path.exists(p)), None)
+                if folder_path:
+                    for i in range(1, 7):
+                        frame_path = os.path.join(folder_path, f"{i}.png")
+                        if os.path.exists(frame_path):
+                            frames.append(pygame.image.load(frame_path).convert_alpha())
+
+                if len(frames) == 6:
+                    sprite_map[name] = frames
+                    continue
+
+                if not sheet_path:
+                    continue
+                sheet = pygame.image.load(sheet_path).convert_alpha()
+                if sheet.get_height() > 420:
+                    continue
                 frame_count = 6
                 frame_w = sheet.get_width() // frame_count
                 frames = []
@@ -272,8 +331,7 @@ class GameScreen:
 
     def draw_intro_leaderboard(self):
         panel = pygame.Rect(WIDTH // 2 - 260, 94, 520, 264)
-        pygame.draw.rect(self.screen, (255, 255, 255), panel, border_radius=16)
-        pygame.draw.rect(self.screen, (170, 170, 190), panel, 2, border_radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
 
         title = self.font.render("Таблица лидеров перед забегом", True, TEXT)
         self.screen.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 14))
@@ -437,7 +495,8 @@ class GameScreen:
         if not self.player:
             return
         p = self.player
-        pygame.draw.rect(self.screen, (255, 255, 255, 180), (16, 16, 430, 110), border_radius=12)
+        hud_rect = pygame.Rect(16, 16, 430, 110)
+        draw_glass_panel(self.screen, hud_rect, fill=(255, 255, 255, 208), border=(170, 184, 220), radius=12)
         self.screen.blit(self.font.render(f"Дистанция: {int(p.distance)} м", True, TEXT), (28, 24))
         self.screen.blit(self.font.render(f"Монеты: {p.coins}", True, TEXT), (28, 56))
         self.screen.blit(self.font.render(f"Сочность: {p.hp}/{p.max_hp}", True, TEXT), (28, 88))
@@ -456,7 +515,8 @@ class GameScreen:
         for text, color in tags:
             s = self.small_font.render(text, True, (20, 20, 20))
             w = s.get_width() + 24
-            pygame.draw.rect(self.screen, color, (x, 20, w, 30), border_radius=14)
+            tag_rect = pygame.Rect(x, 20, w, 30)
+            draw_glass_panel(self.screen, tag_rect, fill=(*color, 230), border=(96, 108, 138), radius=14)
             self.screen.blit(s, (x + 12, 26))
             x += w + 8
 
@@ -471,8 +531,7 @@ class GameScreen:
             "ENTER — еще один забег, ESC — в меню",
         ]
         box = pygame.Rect(WIDTH // 2 - 330, HEIGHT // 2 - 180, 660, 320)
-        pygame.draw.rect(self.screen, (255, 255, 255), box, border_radius=18)
-        pygame.draw.rect(self.screen, (160, 160, 180), box, 3, border_radius=18)
+        draw_glass_panel(self.screen, box, fill=(255, 255, 255, 232), border=(160, 160, 180), radius=18)
         for i, line in enumerate(lines):
             font = self.big_font if i == 0 else self.font
             txt = font.render(line, True, TEXT)

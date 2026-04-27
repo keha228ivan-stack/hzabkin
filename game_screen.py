@@ -462,8 +462,9 @@ class GameScreen:
         et = ent.etype
 
         if et == "cart":
-            pygame.draw.rect(self.screen, (122, 138, 165), r, border_radius=10)
-            pygame.draw.rect(self.screen, (198, 214, 240), r.inflate(-10, -22), border_radius=8)
+            pygame.draw.rect(self.screen, (106, 122, 152), r, border_radius=12)
+            pygame.draw.rect(self.screen, (212, 226, 248), r.inflate(-10, -20), border_radius=10)
+            pygame.draw.rect(self.screen, (255, 255, 255, 80), (r.x + 8, r.y + 6, r.w - 16, 16), border_radius=8)
             for col in range(3):
                 x = r.x + 14 + col * 24
                 pygame.draw.line(self.screen, (160, 180, 205), (x, r.y + 12), (x, r.bottom - 26), 2)
@@ -471,12 +472,14 @@ class GameScreen:
             pygame.draw.circle(self.screen, (44, 44, 54), (r.x + 18, r.bottom), 8)
             pygame.draw.circle(self.screen, (44, 44, 54), (r.right - 18, r.bottom), 8)
         elif et == "mop":
-            pygame.draw.rect(self.screen, (182, 138, 84), (r.centerx - 4, r.y, 8, r.h - 14), border_radius=3)
-            pygame.draw.rect(self.screen, (80, 165, 255), (r.centerx - 20, r.bottom - 16, 40, 12), border_radius=6)
+            pygame.draw.rect(self.screen, (170, 126, 76), (r.centerx - 4, r.y, 8, r.h - 14), border_radius=3)
+            pygame.draw.rect(self.screen, (63, 149, 246), (r.centerx - 20, r.bottom - 16, 40, 12), border_radius=6)
+            pygame.draw.rect(self.screen, (120, 196, 255), (r.centerx - 16, r.bottom - 13, 32, 4), border_radius=3)
             for i in range(5):
                 pygame.draw.line(self.screen, (205, 235, 255), (r.centerx - 18 + i * 8, r.bottom - 3), (r.centerx - 14 + i * 8, r.bottom + 8), 2)
         elif et == "shelf":
-            pygame.draw.rect(self.screen, (190, 120, 65), r, border_radius=6)
+            pygame.draw.rect(self.screen, (176, 104, 52), r, border_radius=8)
+            pygame.draw.rect(self.screen, (202, 140, 88), (r.x + 4, r.y + 4, r.w - 8, 14), border_radius=6)
             for i, c in enumerate([(240, 220, 90), (95, 210, 140), (255, 130, 130)]):
                 pygame.draw.rect(self.screen, c, (r.x + 6, r.y + 14 + i * 24, r.w - 12, 12), border_radius=4)
                 for j in range(4):
@@ -499,12 +502,18 @@ class GameScreen:
             pygame.draw.rect(self.screen, (140, 198, 240), (r.x + 8, r.y + 14, r.w - 16, r.h - 22), border_radius=6)
             pygame.draw.line(self.screen, WHITE, (r.x + 14, r.y + 20), (r.right - 14, r.bottom - 14), 2)
         elif et == "box":
-            pygame.draw.rect(self.screen, (214, 156, 88), r, border_radius=6)
+            pygame.draw.rect(self.screen, (208, 148, 80), r, border_radius=6)
+            pygame.draw.polygon(
+                self.screen,
+                (230, 178, 112),
+                [(r.x + 4, r.y + 4), (r.right - 4, r.y + 4), (r.right - 10, r.y + 12), (r.x + 10, r.y + 12)],
+            )
             pygame.draw.rect(self.screen, (190, 134, 66), r.inflate(-4, -4), 2, border_radius=6)
             pygame.draw.line(self.screen, (148, 92, 36), (r.centerx, r.y + 2), (r.centerx, r.bottom - 2), 2)
             pygame.draw.line(self.screen, (148, 92, 36), (r.x + 4, r.centery), (r.right - 4, r.centery), 2)
         elif et == "long_box":
-            pygame.draw.rect(self.screen, (220, 162, 94), r, border_radius=6)
+            pygame.draw.rect(self.screen, (214, 155, 88), r, border_radius=6)
+            pygame.draw.rect(self.screen, (232, 178, 114), (r.x + 4, r.y + 4, r.w - 8, 8), border_radius=4)
             seg = r.w // 3
             for i in range(3):
                 sx = r.x + i * seg
@@ -541,6 +550,8 @@ class GameScreen:
         elif et == "olive":
             self.draw_sauce_packet(r, (96, 198, 118), (190, 237, 196), "+")
 
+        if et in POWERUP_TYPES:
+            pygame.draw.ellipse(self.screen, (255, 255, 255, 90), (r.x + 6, r.y + 4, r.w - 12, 10))
         pygame.draw.rect(self.screen, (30, 30, 45), r, 2, border_radius=8)
 
     def draw_hud(self):

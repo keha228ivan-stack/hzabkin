@@ -59,19 +59,29 @@ class GameScreen:
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
         files = {
-            "Классическая": "assets/sausage_classic.png",
-            "Охотничья": "assets/sausage_hunter.png",
-            "Баварская": "assets/sausage_bavarian.png",
+            "Классическая": ("assets/sausage_classic", "assets/sausage_classic.png"),
+            "Охотничья": ("assets/sausage_hunter", "assets/sausage_hunter.png"),
+            "Баварская": ("assets/sausage_bavarian", "assets/sausage_bavarian.png"),
         }
-        for name, path in files.items():
-            if not os.path.exists(path):
-                continue
+        for name, (folder_path, sheet_path) in files.items():
             try:
-                sheet = pygame.image.load(path).convert_alpha()
-                frame_count = 6
-                frame_w = sheet.get_width() // frame_count
+                frames: list[pygame.Surface] = []
+                if os.path.isdir(folder_path):
+                    for i in range(1, 7):
+                        frame_path = os.path.join(folder_path, f"{i}.png")
+                        if os.path.exists(frame_path):
+                            frames.append(pygame.image.load(frame_path).convert_alpha())
+
+                if len(frames) == 6:
+                    sprite_map[name] = frames
+                    continue
+
+                if not os.path.exists(sheet_path):
+                    continue
+                sheet = pygame.image.load(sheet_path).convert_alpha()
+                frame_w = sheet.get_width() // 6
                 frames = []
-                for i in range(frame_count):
+                for i in range(6):
                     frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
                     frame.blit(sheet, (0, 0), pygame.Rect(i * frame_w, 0, frame_w, sheet.get_height()))
                     frames.append(frame)

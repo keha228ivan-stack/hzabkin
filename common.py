@@ -179,21 +179,24 @@ class Player:
     def jump(self):
         if self.jump_count < self.max_jumps:
             is_second_jump = self.jump_count == 1
-            jump_impulse = -17.0
+            jump_impulse = -18.8
             if self.sausage.name == "Охотничья":
-                jump_impulse = -17.4 if not is_second_jump else -18.2
+                jump_impulse = -19.4 if not is_second_jump else -20.2
             elif self.sausage.name == "Баварская":
-                jump_impulse = -17.1 if not is_second_jump else -18.8
+                jump_impulse = -19.0 if not is_second_jump else -21.0
                 if is_second_jump:
-                    self.float_timer = 0.18
+                    self.float_timer = 0.24
             self.vel_y = jump_impulse
             self.on_ground = False
             self.jump_count += 1
 
     def slide(self):
-        if not self.sliding and self.on_ground:
+        if not self.sliding:
             self.sliding = True
-            self.slide_timer = 0.6
+            self.slide_timer = 0.5
+            if not self.on_ground:
+                self.float_timer = 0.0
+                self.vel_y = max(self.vel_y, 8.5)
 
     def apply_powerup(self, ptype: str):
         if ptype == "ketchup":
@@ -212,7 +215,7 @@ class Player:
         self.y += (target_y - self.y) * min(1.0, 10 * dt)
 
         if not self.on_ground:
-            gravity = 12.0 if self.float_timer > 0 else 14.4
+            gravity = 11.0 if self.float_timer > 0 else 13.0
             self.float_timer = max(0.0, self.float_timer - dt)
             self.vel_y += gravity * dt
             self.y += self.vel_y

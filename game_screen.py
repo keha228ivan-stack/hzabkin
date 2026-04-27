@@ -1,6 +1,7 @@
 import math
 import os
 import random
+from pathlib import Path
 from datetime import datetime, timezone
 
 import pygame
@@ -58,15 +59,59 @@ class GameScreen:
 
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
-        files = {
-            "Классическая": ("assets/sausage_classic", "assets/sausage_classic.png"),
-            "Охотничья": ("assets/sausage_hunter", "assets/sausage_hunter.png"),
-            "Баварская": ("assets/sausage_bavarian", "assets/sausage_bavarian.png"),
+        asset_roots = {
+            "Классическая": ("classic", "klass", "класс", "3"),
+            "Охотничья": ("hunter", "hunt", "охот", "2"),
+            "Баварская": ("bavarian", "bavar", "бавар", "1"),
         }
-        for name, (folder_path, sheet_path) in files.items():
+        fallback_order = ["Баварская", "Охотничья", "Классическая"]
+        generic_sprite_sheets: list[str] = []
+        if os.path.isdir("assets"):
+            for path in Path("assets").glob("*.png"):
+                lower = path.stem.lower()
+                if any(token in lower for token in ("bg", "background", "store", "shelf", "фон")):
+                    continue
+                try:
+                    img = pygame.image.load(str(path))
+                except pygame.error:
+                    continue
+                w, h = img.get_size()
+                if h <= 420 and w >= h * 4.5:
+                    generic_sprite_sheets.append(str(path))
+        generic_sprite_sheets.sort()
+
+        for name, aliases in asset_roots.items():
             try:
                 frames: list[pygame.Surface] = []
-                if os.path.isdir(folder_path):
+                folder_candidates = [
+                    f"assets/sausage_{aliases[0]}",
+                    f"assets/{aliases[0]}",
+                    f"assets/{aliases[-1]}",
+                ]
+                sheet_candidates = [
+                    f"assets/sausage_{aliases[0]}.png",
+                    f"assets/{aliases[0]}.png",
+                    f"assets/{aliases[-1]}.png",
+                ]
+
+                for path in Path("assets").glob("*.png"):
+                    lower = path.stem.lower()
+                    if any(alias in lower for alias in aliases):
+                        sheet_candidates.insert(0, str(path))
+
+                if name in fallback_order:
+                    idx = fallback_order.index(name)
+                    if idx < len(generic_sprite_sheets):
+                        sheet_candidates.append(generic_sprite_sheets[idx])
+                for path in Path("assets").glob("*"):
+                    if path.is_dir():
+                        lower = path.name.lower()
+                        if any(alias in lower for alias in aliases):
+                            folder_candidates.insert(0, str(path))
+
+                folder_path = next((p for p in folder_candidates if os.path.isdir(p)), None)
+                sheet_path = next((p for p in sheet_candidates if os.path.exists(p)), None)
+                if folder_path:
                     for i in range(1, 7):
                         frame_path = os.path.join(folder_path, f"{i}.png")
                         if os.path.exists(frame_path):
@@ -76,10 +121,13 @@ class GameScreen:
                     sprite_map[name] = frames
                     continue
 
-                if not os.path.exists(sheet_path):
+                if not sheet_path:
                     continue
                 sheet = pygame.image.load(sheet_path).convert_alpha()
-                frame_w = sheet.get_width() // 6
+                if sheet.get_height() > 420:
+                    continue
+                frame_count = 6
+                frame_w = sheet.get_width() // frame_count
                 frames = []
                 for i in range(6):
                     frame = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)

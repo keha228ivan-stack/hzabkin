@@ -27,6 +27,39 @@ PURPLE = (165, 95, 245)
 ORANGE = (255, 145, 55)
 _BG_CACHE: pygame.Surface | None = None
 _BG_CACHE_SIZE: tuple[int, int] | None = None
+_BG_SOURCE: str | None = None
+
+
+def _pick_background_file() -> str | None:
+    if os.path.exists(BACKGROUND_FILE):
+        return BACKGROUND_FILE
+    if not os.path.isdir("assets"):
+        return None
+
+    candidates: list[tuple[int, str]] = []
+    for name in os.listdir("assets"):
+        lower = name.lower()
+        if not lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
+            continue
+        path = os.path.join("assets", name)
+        try:
+            img = pygame.image.load(path)
+        except pygame.error:
+            continue
+        w, h = img.get_size()
+        if h == 0:
+            continue
+        aspect = w / h
+        if not (1.4 <= aspect <= 4.5):
+            continue
+        score = w * h
+        if any(k in lower for k in ("bg", "background", "store", "shelf", "фон")):
+            score += 10_000_000
+        candidates.append((score, path))
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0][1]
 
 
 @dataclass
@@ -215,10 +248,15 @@ def save_progress(save_data):
 
 
 def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | None = None):
-    global _BG_CACHE, _BG_CACHE_SIZE
-    if os.path.exists(BACKGROUND_FILE):
+    global _BG_CACHE, _BG_CACHE_SIZE, _BG_SOURCE
+    bg_path = _pick_background_file()
+    if bg_path:
+        if _BG_SOURCE != bg_path:
+            _BG_CACHE = None
+            _BG_CACHE_SIZE = None
+            _BG_SOURCE = bg_path
         if _BG_CACHE is None or _BG_CACHE_SIZE != (WIDTH, HEIGHT):
-            loaded = pygame.image.load(BACKGROUND_FILE).convert()
+            loaded = pygame.image.load(bg_path).convert()
             _BG_CACHE = pygame.transform.smoothscale(loaded, (WIDTH, HEIGHT))
             _BG_CACHE_SIZE = (WIDTH, HEIGHT)
         drift_x = int(math.sin(t * 0.12) * 8)

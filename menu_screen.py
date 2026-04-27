@@ -1,6 +1,6 @@
 import pygame
 
-from common import HEIGHT, TEXT, WIDTH, SAUSAGE_TYPES, draw_background, save_progress
+from common import HEIGHT, TEXT, WIDTH, SAUSAGE_TYPES, draw_background, draw_glass_panel, save_progress
 
 
 class MenuScreen:
@@ -85,7 +85,7 @@ class MenuScreen:
         self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 90))
 
         name_box = pygame.Rect(WIDTH // 2 - 280, 128, 560, 50)
-        pygame.draw.rect(self.screen, (255, 255, 255), name_box, border_radius=10)
+        draw_glass_panel(self.screen, name_box, fill=(255, 255, 255, 235), border=(170, 182, 214), radius=10)
         border_color = (70, 145, 95) if self.name_confirmed else (140, 140, 170)
         pygame.draw.rect(self.screen, border_color, name_box, 2, border_radius=10)
         prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
@@ -106,9 +106,10 @@ class MenuScreen:
             x = 180 + i * 330
             y = 190
             card = pygame.Rect(x, y, 280, 220)
-            color = (255, 250, 230) if i == self.selected_sausage else (245, 245, 245)
-            pygame.draw.rect(self.screen, color, card, border_radius=16)
-            pygame.draw.rect(self.screen, (120, 120, 140), card, 2, border_radius=16)
+            selected = i == self.selected_sausage
+            color = (255, 248, 226, 232) if selected else (247, 250, 255, 208)
+            border = (235, 164, 90) if selected else (147, 160, 198)
+            draw_glass_panel(self.screen, card, fill=color, border=border, radius=16)
             if not self.name_confirmed:
                 pygame.draw.rect(self.screen, (235, 235, 240), card.inflate(-8, -8), border_radius=12)
                 lock = self.small_font.render("Сначала подтвердите имя", True, (110, 110, 125))
@@ -135,8 +136,7 @@ class MenuScreen:
         ]
 
         panel = pygame.Rect(130, 468, WIDTH - 260, 220)
-        pygame.draw.rect(self.screen, (252, 253, 255), panel, border_radius=12)
-        pygame.draw.rect(self.screen, (185, 190, 210), panel, 2, border_radius=12)
+        draw_glass_panel(self.screen, panel, fill=(252, 253, 255, 225), border=(185, 190, 210), radius=12)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
@@ -149,8 +149,7 @@ class MenuScreen:
         self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 118))
 
         panel = pygame.Rect(WIDTH // 2 - 320, 160, 640, 420)
-        pygame.draw.rect(self.screen, (255, 255, 255), panel, border_radius=16)
-        pygame.draw.rect(self.screen, (170, 170, 190), panel, 2, border_radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
 
         headers = self.font.render("Топ игроков", True, TEXT)
         self.screen.blit(headers, (panel.centerx - headers.get_width() // 2, panel.y + 20))

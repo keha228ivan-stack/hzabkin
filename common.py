@@ -213,8 +213,22 @@ def save_progress(save_data):
 
 def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | None = None):
     screen.fill(STORE_BG)
-    pygame.draw.rect(screen, (255, 222, 150), (0, 0, WIDTH, 140))
-    pygame.draw.rect(screen, (255, 235, 180), (0, 120, WIDTH, 70))
+
+    sky_grad = pygame.Surface((WIDTH, 210), pygame.SRCALPHA)
+    for y in range(210):
+        mix = y / 210
+        r = int(255 - 12 * mix)
+        g = int(238 - 42 * mix)
+        b = int(180 + 35 * mix)
+        pygame.draw.line(sky_grad, (r, g, b, 255), (0, y), (WIDTH, y))
+    screen.blit(sky_grad, (0, 0))
+    pygame.draw.rect(screen, (255, 247, 206), (0, 120, WIDTH, 76))
+
+    vignette = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    pygame.draw.rect(vignette, (0, 0, 0, 26), (0, 0, WIDTH, HEIGHT), border_radius=0)
+    pygame.draw.rect(vignette, (0, 0, 0, 0), (26, 16, WIDTH - 52, HEIGHT - 32), border_radius=24)
+    screen.blit(vignette, (0, 0))
+
     for i in range(8):
         x = 80 + i * 160
         pulse = 14 + int(4 * math.sin(t * 2.3 + i))
@@ -250,13 +264,26 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
     if highlighted_lane is not None:
         ly = LANES_Y[highlighted_lane]
         overlay = pygame.Surface((WIDTH, 56), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 40))
+        overlay.fill((255, 255, 255, 52))
         screen.blit(overlay, (0, ly - 52))
 
     for i in range(18):
         sx = int((i * 80 + t * 55) % WIDTH)
         sy = 180 + int(16 * math.sin(t * 1.8 + i))
         pygame.draw.circle(screen, (255, 255, 255), (sx, sy), 1)
+
+
+def draw_glass_panel(screen: pygame.Surface, rect: pygame.Rect, fill=(255, 255, 255, 205), border=(170, 185, 220), radius: int = 16):
+    shadow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
+    pygame.draw.rect(shadow, (34, 41, 68, 70), (6, 6, rect.w, rect.h), border_radius=radius + 3)
+    screen.blit(shadow, (rect.x - 6, rect.y - 2))
+
+    glass = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(glass, fill, (0, 0, rect.w, rect.h), border_radius=radius)
+    highlight_h = max(24, rect.h // 3)
+    pygame.draw.rect(glass, (255, 255, 255, 68), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
+    pygame.draw.rect(glass, border, (0, 0, rect.w, rect.h), 2, border_radius=radius)
+    screen.blit(glass, rect.topleft)
 
 
 def random_obstacle_or_enemy():

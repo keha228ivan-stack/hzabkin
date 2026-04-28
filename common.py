@@ -345,6 +345,10 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
         decor = _build_background_decor(using_photo_bg)
         _BG_DECOR_CACHE[decor_key] = decor
     screen.blit(decor, (0, 0))
+    if using_photo_bg:
+        bottom_mask = pygame.Surface((WIDTH, 98), pygame.SRCALPHA)
+        bottom_mask.fill((176, 180, 198, 210))
+        screen.blit(bottom_mask, (0, HEIGHT - 98))
 
     if highlighted_lane is not None:
         ly = LANES_Y[highlighted_lane]
@@ -353,15 +357,23 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
         screen.blit(overlay, (0, ly - 52))
 
 
-def draw_glass_panel(screen: pygame.Surface, rect: pygame.Rect, fill=(255, 255, 255, 205), border=(170, 185, 220), radius: int = 16):
+def draw_glass_panel(
+    screen: pygame.Surface,
+    rect: pygame.Rect,
+    fill=(255, 255, 255, 205),
+    border=(170, 185, 220),
+    radius: int = 16,
+    glossy: bool = True,
+):
     shadow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
     pygame.draw.rect(shadow, (34, 41, 68, 70), (6, 6, rect.w, rect.h), border_radius=radius + 3)
     screen.blit(shadow, (rect.x - 6, rect.y - 2))
 
     glass = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
     pygame.draw.rect(glass, fill, (0, 0, rect.w, rect.h), border_radius=radius)
-    highlight_h = min(72, max(24, rect.h // 4))
-    pygame.draw.rect(glass, (255, 255, 255, 56), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
+    if glossy:
+        highlight_h = min(72, max(24, rect.h // 4))
+        pygame.draw.rect(glass, (255, 255, 255, 56), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
     pygame.draw.rect(glass, border, (0, 0, rect.w, rect.h), 2, border_radius=radius)
     screen.blit(glass, rect.topleft)
 

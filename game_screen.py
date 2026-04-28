@@ -252,10 +252,11 @@ class GameScreen:
         p_rect = p.rect
         ent_rect = ent.rect
 
-        if ent.etype not in POWERUP_TYPES and not p.on_ground:
+        jumpable_ground_obstacles = {"box", "long_box", "conveyor"}
+        if ent.etype not in POWERUP_TYPES and not p.on_ground and ent.etype in jumpable_ground_obstacles:
             return
 
-        if ent.etype in {"box", "conveyor", "long_box"} and p_rect.bottom <= ent_rect.top + 8:
+        if ent.etype in jumpable_ground_obstacles and p_rect.bottom <= ent_rect.top + 8:
             return
 
         if ent_rect.colliderect(p_rect):
@@ -392,7 +393,7 @@ class GameScreen:
 
     def draw_intro_leaderboard(self):
         panel = pygame.Rect(WIDTH // 2 - 260, 94, 520, 264)
-        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255), border=(170, 170, 190), radius=16, glossy=False)
 
         title = self.font.render("Таблица лидеров перед забегом", True, TEXT)
         self.screen.blit(title, (panel.centerx - title.get_width() // 2, panel.y + 14))
@@ -421,15 +422,15 @@ class GameScreen:
         run_t = pygame.time.get_ticks() * 0.018
         bob = int(math.sin(run_t) * 3)
         body_rect = body_rect.move(0, bob)
-        model_rect = pygame.Rect(0, 0, max(24, int(body_rect.w * 0.85)), max(20, int(body_rect.h * 0.85)))
+        model_rect = pygame.Rect(0, 0, max(22, int(body_rect.w * 0.72)), max(18, int(body_rect.h * 0.72)))
         model_rect.center = body_rect.center
 
         frames = self.sausage_sprites.get(p.sausage.name, [])
         if frames:
             frame = frames[int(pygame.time.get_ticks() * 0.015) % len(frames)]
-            scaled = pygame.transform.smoothscale(frame, (model_rect.w + 22, model_rect.h + 26))
-            self.screen.blit(scaled, (model_rect.x - 11, model_rect.y - 16))
-            pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 24, LANES_Y[p.target_lane] - 4, 48, 11))
+            scaled = pygame.transform.smoothscale(frame, (model_rect.w + 6, model_rect.h + 8))
+            self.screen.blit(scaled, (model_rect.x - 3, model_rect.y - 5))
+            pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 20, LANES_Y[p.target_lane] - 4, 40, 9))
             return
 
         pygame.draw.ellipse(self.screen, (96, 46, 40), model_rect.inflate(8, 8))
@@ -454,7 +455,7 @@ class GameScreen:
         pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 22, model_rect.bottom - 2), (model_rect.x + 12 + leg_a, model_rect.bottom + 12), 4)
         pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 38, model_rect.bottom - 2), (model_rect.x + 50 + leg_b, model_rect.bottom + 12), 4)
         pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 52, model_rect.bottom - 2), (model_rect.x + 62 - leg_a, model_rect.bottom + 12), 4)
-        pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 24, LANES_Y[p.target_lane] - 4, 48, 11))
+        pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 20, LANES_Y[p.target_lane] - 4, 40, 9))
 
     def draw_sauce_packet(self, rect: pygame.Rect, base_color, accent_color, label: str):
         pygame.draw.polygon(
@@ -588,7 +589,7 @@ class GameScreen:
             return
         p = self.player
         hud_rect = pygame.Rect(16, 16, 430, 110)
-        draw_glass_panel(self.screen, hud_rect, fill=(255, 255, 255, 208), border=(170, 184, 220), radius=12)
+        draw_glass_panel(self.screen, hud_rect, fill=(255, 255, 255), border=(170, 184, 220), radius=12, glossy=False)
         self.screen.blit(self.font.render(f"Дистанция: {int(p.distance)} м", True, TEXT), (28, 24))
         self.screen.blit(self.font.render(f"Монеты: {p.coins}", True, TEXT), (28, 56))
         self.screen.blit(self.font.render(f"Сочность: {p.hp}/{p.max_hp}", True, TEXT), (28, 88))
@@ -623,7 +624,7 @@ class GameScreen:
             "ENTER — еще один забег, ESC — в меню",
         ]
         box = pygame.Rect(WIDTH // 2 - 330, HEIGHT // 2 - 180, 660, 320)
-        draw_glass_panel(self.screen, box, fill=(255, 255, 255, 232), border=(160, 160, 180), radius=18)
+        draw_glass_panel(self.screen, box, fill=(255, 255, 255), border=(160, 160, 180), radius=18, glossy=False)
         for i, line in enumerate(lines):
             font = self.big_font if i == 0 else self.font
             txt = font.render(line, True, TEXT)

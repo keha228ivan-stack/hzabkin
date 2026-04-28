@@ -86,3 +86,33 @@ python main.py
 6. Если вокруг сосиски белый/серый квадрат — используй PNG с прозрачностью (альфа). Игра пытается автоматически вычистить светлый фон, но лучший результат всегда у исходного прозрачного PNG.
 
 Прогресс сохраняется в `save_data.json`.
+
+## Как собрать `.exe` (Windows)
+
+Самый простой способ — через **PyInstaller**.
+
+1. Установи зависимости:
+
+```bash
+pip install pygame pyinstaller
+```
+
+2. В корне проекта выполни сборку:
+
+```bash
+pyinstaller --noconfirm --onefile --windowed --name sausage_runner main.py
+```
+
+3. Готовый файл появится в папке:
+
+- `dist/sausage_runner.exe`
+
+### Если используешь папку `assets`
+
+Чтобы фон/спрайты тоже попали в `.exe`, добавь их в команду:
+
+```bash
+pyinstaller --noconfirm --onefile --windowed --name sausage_runner --add-data "assets;assets" main.py
+```
+
+> В Windows разделитель для `--add-data` — точка с запятой `;`.

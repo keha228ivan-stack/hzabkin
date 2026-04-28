@@ -25,6 +25,7 @@ from common import (
     Player,
     draw_background,
     draw_glass_panel,
+    get_assets_dir,
     random_obstacle_or_enemy,
     random_powerup,
     save_progress,
@@ -118,6 +119,7 @@ class GameScreen:
 
     def load_sausage_sprites(self) -> dict[str, list[pygame.Surface]]:
         sprite_map: dict[str, list[pygame.Surface]] = {}
+        assets_dir = Path(get_assets_dir())
         asset_roots = {
             "Классическая": ("classic", "klass", "класс", "3"),
             "Охотничья": ("hunter", "hunt", "охот", "2"),
@@ -125,8 +127,8 @@ class GameScreen:
         }
         fallback_order = ["Баварская", "Охотничья", "Классическая"]
         generic_sprite_sheets: list[str] = []
-        if os.path.isdir("assets"):
-            for path in Path("assets").glob("*.png"):
+        if assets_dir.is_dir():
+            for path in assets_dir.glob("*.png"):
                 lower = path.stem.lower()
                 if any(token in lower for token in ("bg", "background", "store", "shelf", "фон")):
                     continue
@@ -143,17 +145,17 @@ class GameScreen:
             try:
                 frames: list[pygame.Surface] = []
                 folder_candidates = [
-                    f"assets/sausage_{aliases[0]}",
-                    f"assets/{aliases[0]}",
-                    f"assets/{aliases[-1]}",
+                    str(assets_dir / f"sausage_{aliases[0]}"),
+                    str(assets_dir / aliases[0]),
+                    str(assets_dir / aliases[-1]),
                 ]
                 sheet_candidates = [
-                    f"assets/sausage_{aliases[0]}.png",
-                    f"assets/{aliases[0]}.png",
-                    f"assets/{aliases[-1]}.png",
+                    str(assets_dir / f"sausage_{aliases[0]}.png"),
+                    str(assets_dir / f"{aliases[0]}.png"),
+                    str(assets_dir / f"{aliases[-1]}.png"),
                 ]
 
-                for path in Path("assets").glob("*.png"):
+                for path in assets_dir.glob("*.png"):
                     lower = path.stem.lower()
                     if any(alias in lower for alias in aliases):
                         sheet_candidates.insert(0, str(path))
@@ -162,7 +164,7 @@ class GameScreen:
                     idx = fallback_order.index(name)
                     if idx < len(generic_sprite_sheets):
                         sheet_candidates.append(generic_sprite_sheets[idx])
-                for path in Path("assets").glob("*"):
+                for path in assets_dir.glob("*"):
                     if path.is_dir():
                         lower = path.name.lower()
                         if any(alias in lower for alias in aliases):

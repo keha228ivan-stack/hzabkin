@@ -2,7 +2,9 @@ import json
 import math
 import os
 import random
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 import pygame
 
@@ -29,6 +31,18 @@ _BG_CACHE: pygame.Surface | None = None
 _BG_CACHE_SIZE: tuple[int, int] | None = None
 _BG_SOURCE: str | None = None
 _BG_DECOR_CACHE: dict[tuple[bool, int, int], pygame.Surface] = {}
+
+
+def resource_path(*parts: str) -> str:
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return str(base_path.joinpath(*parts))
+
+
+def get_assets_dir() -> str:
+    packaged_assets = resource_path("assets")
+    if os.path.isdir(packaged_assets):
+        return packaged_assets
+    return os.path.abspath("assets")
 
 
 def _build_background_decor(using_photo_bg: bool) -> pygame.Surface:
@@ -80,17 +94,22 @@ def _build_background_decor(using_photo_bg: bool) -> pygame.Surface:
 
 
 def _pick_background_file() -> str | None:
+    packaged_bg = resource_path("assets", "store_shelf_bg.png")
+    if os.path.exists(packaged_bg):
+        return packaged_bg
     if os.path.exists(BACKGROUND_FILE):
-        return BACKGROUND_FILE
-    if not os.path.isdir("assets"):
+        return os.path.abspath(BACKGROUND_FILE)
+
+    assets_dir = get_assets_dir()
+    if not os.path.isdir(assets_dir):
         return None
 
     candidates: list[tuple[int, str]] = []
-    for name in os.listdir("assets"):
+    for name in os.listdir(assets_dir):
         lower = name.lower()
         if not lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
             continue
-        path = os.path.join("assets", name)
+        path = os.path.join(assets_dir, name)
         try:
             img = pygame.image.load(path)
         except pygame.error:

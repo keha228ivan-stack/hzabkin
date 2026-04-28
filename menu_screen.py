@@ -52,8 +52,10 @@ class MenuScreen:
             if self.show_leaderboard:
                 return None
 
-            if event.key == pygame.K_e:
+            if event.key in (pygame.K_e, pygame.K_BACKSPACE):
                 self.name_confirmed = False
+                if event.key == pygame.K_BACKSPACE:
+                    self.player_name = self.player_name[:-1]
                 return None
             if event.key in (pygame.K_a, pygame.K_LEFT):
                 self.selected_sausage = max(0, self.selected_sausage - 1)
@@ -131,12 +133,12 @@ class MenuScreen:
             f"C: Бонус монет ({up['coin_bonus']}/5), цена {30 + up['coin_bonus'] * 35}",
             "L или TAB: открыть экран лидерборда",
             "Выбор сосиски: A/D или ←/→",
-            "E: вернуться к редактированию имени",
+            "E/Backspace: вернуться к редактированию имени",
             "Управление: W/S (или ←/→), ↑ прыжок, ↓ подкат, свайпы поддерживаются",
         ]
 
         panel = pygame.Rect(130, 468, WIDTH - 260, 220)
-        draw_glass_panel(self.screen, panel, fill=(252, 253, 255, 225), border=(185, 190, 210), radius=12)
+        draw_glass_panel(self.screen, panel, fill=(252, 253, 255, 242), border=(185, 190, 210), radius=12)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
@@ -149,7 +151,7 @@ class MenuScreen:
         self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 118))
 
         panel = pygame.Rect(WIDTH // 2 - 320, 160, 640, 420)
-        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 242), border=(170, 170, 190), radius=16)
 
         headers = self.font.render("Топ игроков", True, TEXT)
         self.screen.blit(headers, (panel.centerx - headers.get_width() // 2, panel.y + 20))
@@ -160,10 +162,12 @@ class MenuScreen:
             return
 
         for i, row in enumerate(rows):
+            y = panel.y + 84 + i * 30
+            if i % 2 == 0:
+                pygame.draw.rect(self.screen, (242, 244, 252, 145), (panel.x + 24, y - 2, panel.w - 48, 28), border_radius=6)
             place = self.small_font.render(f"{i + 1}.", True, TEXT)
             name = self.small_font.render(row.get("name", "Игрок"), True, TEXT)
             score = self.small_font.render(f"{row.get('score', 0)}", True, TEXT)
-            y = panel.y + 84 + i * 30
             self.screen.blit(place, (panel.x + 34, y))
             self.screen.blit(name, (panel.x + 84, y))
             self.screen.blit(score, (panel.right - 110, y))

@@ -52,8 +52,10 @@ class MenuScreen:
             if self.show_leaderboard:
                 return None
 
-            if event.key == pygame.K_e:
+            if event.key in (pygame.K_e, pygame.K_BACKSPACE):
                 self.name_confirmed = False
+                if event.key == pygame.K_BACKSPACE:
+                    self.player_name = self.player_name[:-1]
                 return None
             if event.key in (pygame.K_a, pygame.K_LEFT):
                 self.selected_sausage = max(0, self.selected_sausage - 1)
@@ -85,7 +87,7 @@ class MenuScreen:
         self.screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, 90))
 
         name_box = pygame.Rect(WIDTH // 2 - 280, 128, 560, 50)
-        draw_glass_panel(self.screen, name_box, fill=(255, 255, 255, 235), border=(170, 182, 214), radius=10)
+        draw_glass_panel(self.screen, name_box, fill=(255, 255, 255), border=(170, 182, 214), radius=10, glossy=False)
         border_color = (70, 145, 95) if self.name_confirmed else (140, 140, 170)
         pygame.draw.rect(self.screen, border_color, name_box, 2, border_radius=10)
         prompt = self.small_font.render("Имя игрока:", True, (60, 60, 80))
@@ -107,9 +109,9 @@ class MenuScreen:
             y = 190
             card = pygame.Rect(x, y, 280, 220)
             selected = i == self.selected_sausage
-            color = (255, 248, 226, 232) if selected else (247, 250, 255, 208)
+            color = (255, 248, 226) if selected else (247, 250, 255)
             border = (235, 164, 90) if selected else (147, 160, 198)
-            draw_glass_panel(self.screen, card, fill=color, border=border, radius=16)
+            draw_glass_panel(self.screen, card, fill=color, border=border, radius=16, glossy=False)
             if not self.name_confirmed:
                 pygame.draw.rect(self.screen, (235, 235, 240), card.inflate(-8, -8), border_radius=12)
                 lock = self.small_font.render("Сначала подтвердите имя", True, (110, 110, 125))
@@ -131,12 +133,12 @@ class MenuScreen:
             f"C: Бонус монет ({up['coin_bonus']}/5), цена {30 + up['coin_bonus'] * 35}",
             "L или TAB: открыть экран лидерборда",
             "Выбор сосиски: A/D или ←/→",
-            "E: вернуться к редактированию имени",
+            "E/Backspace: вернуться к редактированию имени",
             "Управление: W/S (или ←/→), ↑ прыжок, ↓ подкат, свайпы поддерживаются",
         ]
 
         panel = pygame.Rect(130, 468, WIDTH - 260, 220)
-        draw_glass_panel(self.screen, panel, fill=(252, 253, 255, 225), border=(185, 190, 210), radius=12)
+        draw_glass_panel(self.screen, panel, fill=(252, 253, 255), border=(185, 190, 210), radius=12, glossy=False)
 
         for i, row in enumerate(info):
             text = self.small_font.render(row, True, TEXT)
@@ -149,7 +151,7 @@ class MenuScreen:
         self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 118))
 
         panel = pygame.Rect(WIDTH // 2 - 320, 160, 640, 420)
-        draw_glass_panel(self.screen, panel, fill=(255, 255, 255, 228), border=(170, 170, 190), radius=16)
+        draw_glass_panel(self.screen, panel, fill=(255, 255, 255), border=(170, 170, 190), radius=16, glossy=False)
 
         headers = self.font.render("Топ игроков", True, TEXT)
         self.screen.blit(headers, (panel.centerx - headers.get_width() // 2, panel.y + 20))
@@ -160,10 +162,12 @@ class MenuScreen:
             return
 
         for i, row in enumerate(rows):
+            y = panel.y + 84 + i * 30
+            if i % 2 == 0:
+                pygame.draw.rect(self.screen, (242, 244, 252, 145), (panel.x + 24, y - 2, panel.w - 48, 28), border_radius=6)
             place = self.small_font.render(f"{i + 1}.", True, TEXT)
             name = self.small_font.render(row.get("name", "Игрок"), True, TEXT)
             score = self.small_font.render(f"{row.get('score', 0)}", True, TEXT)
-            y = panel.y + 84 + i * 30
             self.screen.blit(place, (panel.x + 34, y))
             self.screen.blit(name, (panel.x + 84, y))
             self.screen.blit(score, (panel.right - 110, y))

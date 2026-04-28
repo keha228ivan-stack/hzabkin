@@ -28,6 +28,55 @@ ORANGE = (255, 145, 55)
 _BG_CACHE: pygame.Surface | None = None
 _BG_CACHE_SIZE: tuple[int, int] | None = None
 _BG_SOURCE: str | None = None
+_BG_DECOR_CACHE: dict[tuple[bool, int, int], pygame.Surface] = {}
+
+
+def _build_background_decor(using_photo_bg: bool) -> pygame.Surface:
+    decor = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+    outer_alpha = 10 if using_photo_bg else 22
+    pygame.draw.rect(decor, (0, 0, 0, outer_alpha), (0, 0, WIDTH, HEIGHT))
+    pygame.draw.rect(decor, (0, 0, 0, 0), (24, 12, WIDTH - 48, HEIGHT - 24), border_radius=22)
+
+    for i in range(8):
+        x = 80 + i * 160
+        alpha = 86 if using_photo_bg else 125
+        pygame.draw.ellipse(decor, (255, 250, 210, alpha), (x, 26, 95, 14))
+
+    if not using_photo_bg:
+        floor_start = int(HEIGHT * 0.42)
+        floor_end = LANES_Y[0] + 48
+        row = 0
+        y0 = floor_start
+        while y0 < floor_end:
+            shade = max(158, 240 - row * 6)
+            pygame.draw.rect(decor, (shade, shade, shade + 10), (0, y0, WIDTH, 24))
+            if row % 2 == 0:
+                pygame.draw.line(decor, (245, 245, 255), (0, y0 + 2), (WIDTH, y0 + 2), 1)
+            row += 1
+            y0 += 24
+
+        for i in range(9):
+            x = i * 220
+            pygame.draw.rect(decor, (195, 210, 235), (x, 120, 130, 180), border_radius=12)
+            pygame.draw.rect(decor, (180, 198, 228), (x + 10, 145, 110, 12), border_radius=5)
+            pygame.draw.rect(decor, (180, 198, 228), (x + 10, 200, 110, 12), border_radius=5)
+            for j, color in enumerate([(246, 110, 110), (98, 195, 122), (86, 165, 255), (248, 197, 88)]):
+                pygame.draw.rect(decor, color, (x + 16 + j * 24, 160, 18, 30), border_radius=4)
+
+    lane_bands = [
+        ((77, 156, 255), (148, 210, 255)),
+        ((255, 146, 92), (255, 210, 126)),
+        ((139, 118, 255), (198, 165, 255)),
+    ]
+    for idx, lane_y in enumerate(LANES_Y):
+        main, glow = lane_bands[idx]
+        band_top = lane_y + 5
+        pygame.draw.rect(decor, glow, (0, band_top - 6, WIDTH, 14), border_radius=8)
+        pygame.draw.rect(decor, main, (0, band_top - 2, WIDTH, 6), border_radius=6)
+        pygame.draw.line(decor, WHITE, (0, band_top + 1), (WIDTH, band_top + 1), 2)
+
+    return decor
 
 
 def _pick_background_file() -> str | None:
@@ -72,7 +121,7 @@ class SausageType:
 SAUSAGE_TYPES = [
     SausageType("Классическая", (220, 90, 65), "Стандартный баланс"),
     SausageType("Охотничья", (160, 80, 55), "Двойной прыжок"),
-    SausageType("Баварская", (235, 145, 95), "+1 дополнительная жизнь"),
+    SausageType("Баварская", (235, 145, 95), "Плотный прыжок + доп. жизнь"),
 ]
 
 OBSTACLE_TYPES = [
@@ -104,9 +153,10 @@ class Player:
         self.vel_y = 0.0
         self.on_ground = True
         self.jump_count = 0
-        self.max_jumps = 2 if sausage.name == "Охотничья" else 1
+        self.max_jumps = 2 if sausage.name in ("Охотничья", "Баварская") else 1
         self.sliding = False
         self.slide_timer = 0.0
+        self.float_timer = 0.0
 
         self.max_hp = 3 + extra_life
         self.hp = self.max_hp
@@ -128,14 +178,25 @@ class Player:
 
     def jump(self):
         if self.jump_count < self.max_jumps:
-            self.vel_y = -16.8
+            is_second_jump = self.jump_count == 1
+            jump_impulse = -18.8
+            if self.sausage.name == "Охотничья":
+                jump_impulse = -19.4 if not is_second_jump else -20.2
+            elif self.sausage.name == "Баварская":
+                jump_impulse = -19.0 if not is_second_jump else -21.0
+                if is_second_jump:
+                    self.float_timer = 0.24
+            self.vel_y = jump_impulse
             self.on_ground = False
             self.jump_count += 1
 
     def slide(self):
-        if not self.sliding and self.on_ground:
+        if not self.sliding:
             self.sliding = True
-            self.slide_timer = 0.6
+            self.slide_timer = 0.5
+            if not self.on_ground:
+                self.float_timer = 0.0
+                self.vel_y = max(self.vel_y, 8.5)
 
     def apply_powerup(self, ptype: str):
         if ptype == "ketchup":
@@ -154,7 +215,9 @@ class Player:
         self.y += (target_y - self.y) * min(1.0, 10 * dt)
 
         if not self.on_ground:
-            self.vel_y += 17.0 * dt
+            gravity = 11.0 if self.float_timer > 0 else 13.0
+            self.float_timer = max(0.0, self.float_timer - dt)
+            self.vel_y += gravity * dt
             self.y += self.vel_y
             ground = LANES_Y[self.target_lane]
             if self.y >= ground:
@@ -162,6 +225,7 @@ class Player:
                 self.vel_y = 0
                 self.on_ground = True
                 self.jump_count = 0
+                self.float_timer = 0.0
 
         if self.sliding:
             self.slide_timer -= dt
@@ -248,13 +312,15 @@ def save_progress(save_data):
 
 
 def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | None = None):
-    global _BG_CACHE, _BG_CACHE_SIZE, _BG_SOURCE
+    global _BG_CACHE, _BG_CACHE_SIZE, _BG_SOURCE, _BG_DECOR_CACHE
     bg_path = _pick_background_file()
-    if bg_path:
+    using_photo_bg = bool(bg_path)
+    if using_photo_bg:
         if _BG_SOURCE != bg_path:
             _BG_CACHE = None
             _BG_CACHE_SIZE = None
             _BG_SOURCE = bg_path
+            _BG_DECOR_CACHE = {}
         if _BG_CACHE is None or _BG_CACHE_SIZE != (WIDTH, HEIGHT):
             loaded = pygame.image.load(bg_path).convert()
             _BG_CACHE = pygame.transform.smoothscale(loaded, (WIDTH, HEIGHT))
@@ -273,42 +339,16 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
         screen.blit(sky_grad, (0, 0))
         pygame.draw.rect(screen, (255, 247, 206), (0, 120, WIDTH, 76))
 
-    vignette = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    pygame.draw.rect(vignette, (0, 0, 0, 22), (0, 0, WIDTH, HEIGHT), border_radius=0)
-    pygame.draw.rect(vignette, (0, 0, 0, 0), (24, 12, WIDTH - 48, HEIGHT - 24), border_radius=22)
-    screen.blit(vignette, (0, 0))
-
-    for i in range(8):
-        x = 80 + i * 160
-        pulse = 14 + int(4 * math.sin(t * 2.3 + i))
-        pygame.draw.ellipse(screen, (255, 250, 210, 135), (x, 26, 95, pulse))
-
-    for i in range(14):
-        y0 = int(HEIGHT * 0.42 + i * 24)
-        shade = max(150, 240 - i * 6)
-        pygame.draw.rect(screen, (shade, shade, shade + 10), (0, y0, WIDTH, 26))
-        if i % 2 == 0:
-            pygame.draw.line(screen, (245, 245, 255), (0, y0 + 2), (WIDTH, y0 + 2), 1)
-
-    for i in range(9):
-        x = i * 220 - (t * 90) % 220
-        pygame.draw.rect(screen, (195, 210, 235), (x, 120, 130, 180), border_radius=12)
-        pygame.draw.rect(screen, (180, 198, 228), (x + 10, 145, 110, 12), border_radius=5)
-        pygame.draw.rect(screen, (180, 198, 228), (x + 10, 200, 110, 12), border_radius=5)
-        for j, color in enumerate([(246, 110, 110), (98, 195, 122), (86, 165, 255), (248, 197, 88)]):
-            pygame.draw.rect(screen, color, (x + 16 + j * 24, 160, 18, 30), border_radius=4)
-
-    lane_bands = [
-        ((77, 156, 255), (148, 210, 255)),
-        ((255, 146, 92), (255, 210, 126)),
-        ((139, 118, 255), (198, 165, 255)),
-    ]
-    for idx, lane_y in enumerate(LANES_Y):
-        main, glow = lane_bands[idx]
-        band_top = lane_y + 5
-        pygame.draw.rect(screen, glow, (0, band_top - 6, WIDTH, 14), border_radius=8)
-        pygame.draw.rect(screen, main, (0, band_top - 2, WIDTH, 6), border_radius=6)
-        pygame.draw.line(screen, WHITE, (0, band_top + 1), (WIDTH, band_top + 1), 2)
+    decor_key = (using_photo_bg, WIDTH, HEIGHT)
+    decor = _BG_DECOR_CACHE.get(decor_key)
+    if decor is None:
+        decor = _build_background_decor(using_photo_bg)
+        _BG_DECOR_CACHE[decor_key] = decor
+    screen.blit(decor, (0, 0))
+    if using_photo_bg:
+        bottom_mask = pygame.Surface((WIDTH, 98), pygame.SRCALPHA)
+        bottom_mask.fill((176, 180, 198, 210))
+        screen.blit(bottom_mask, (0, HEIGHT - 98))
 
     if highlighted_lane is not None:
         ly = LANES_Y[highlighted_lane]
@@ -316,21 +356,24 @@ def draw_background(screen: pygame.Surface, t: float, highlighted_lane: int | No
         overlay.fill((255, 255, 255, 52))
         screen.blit(overlay, (0, ly - 52))
 
-    for i in range(18):
-        sx = int((i * 80 + t * 55) % WIDTH)
-        sy = 180 + int(16 * math.sin(t * 1.8 + i))
-        pygame.draw.circle(screen, (255, 255, 255), (sx, sy), 1)
 
-
-def draw_glass_panel(screen: pygame.Surface, rect: pygame.Rect, fill=(255, 255, 255, 205), border=(170, 185, 220), radius: int = 16):
+def draw_glass_panel(
+    screen: pygame.Surface,
+    rect: pygame.Rect,
+    fill=(255, 255, 255, 205),
+    border=(170, 185, 220),
+    radius: int = 16,
+    glossy: bool = True,
+):
     shadow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
     pygame.draw.rect(shadow, (34, 41, 68, 70), (6, 6, rect.w, rect.h), border_radius=radius + 3)
     screen.blit(shadow, (rect.x - 6, rect.y - 2))
 
     glass = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
     pygame.draw.rect(glass, fill, (0, 0, rect.w, rect.h), border_radius=radius)
-    highlight_h = max(24, rect.h // 3)
-    pygame.draw.rect(glass, (255, 255, 255, 68), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
+    if glossy:
+        highlight_h = min(72, max(24, rect.h // 4))
+        pygame.draw.rect(glass, (255, 255, 255, 56), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
     pygame.draw.rect(glass, border, (0, 0, rect.w, rect.h), 2, border_radius=radius)
     screen.blit(glass, rect.topleft)
 

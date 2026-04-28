@@ -45,6 +45,7 @@ class GameScreen:
         self.world_speed = self.base_speed
         self.difficulty = 1.0
         self.spawn_timer = 0.88
+        self.obstacle_gap_timer = 0.0
         self.powerup_timer = 3.0
         self.invuln_flash = False
         self.state = "running"
@@ -196,6 +197,7 @@ class GameScreen:
         self.player = Player(sausage, extra_life=self.save["upgrades"]["hp"])
         self.entities = []
         self.spawn_timer = 0.88
+        self.obstacle_gap_timer = 0.0
         self.powerup_timer = 3.0
         self.world_speed = self.base_speed + self.save["upgrades"]["speed"] * 28
         self.difficulty = 1.0
@@ -337,9 +339,19 @@ class GameScreen:
             self.chaser_x += (retreat_target - self.chaser_x) * min(1.0, dt * 3.2)
 
         self.spawn_timer -= dt
+        self.obstacle_gap_timer += dt
         if self.spawn_timer <= 0:
             self.entities.append(random_obstacle_or_enemy())
+            self.obstacle_gap_timer = 0.0
             self.spawn_timer = max(0.20, 0.88 - self.difficulty * 0.085)
+
+        has_upcoming_obstacle = any(
+            ent.etype not in POWERUP_TYPES and ent.x > p.x + 120 for ent in self.entities
+        )
+        if not has_upcoming_obstacle and self.obstacle_gap_timer > 0.95:
+            self.entities.append(random_obstacle_or_enemy())
+            self.obstacle_gap_timer = 0.0
+            self.spawn_timer = min(self.spawn_timer, 0.28)
 
         self.powerup_timer -= dt
         if self.powerup_timer <= 0:

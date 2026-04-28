@@ -360,8 +360,8 @@ def draw_glass_panel(screen: pygame.Surface, rect: pygame.Rect, fill=(255, 255, 
 
     glass = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
     pygame.draw.rect(glass, fill, (0, 0, rect.w, rect.h), border_radius=radius)
-    highlight_h = max(24, rect.h // 3)
-    pygame.draw.rect(glass, (255, 255, 255, 68), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
+    highlight_h = min(72, max(24, rect.h // 4))
+    pygame.draw.rect(glass, (255, 255, 255, 56), (10, 8, rect.w - 20, highlight_h), border_radius=max(8, radius - 4))
     pygame.draw.rect(glass, border, (0, 0, rect.w, rect.h), 2, border_radius=radius)
     screen.blit(glass, rect.topleft)
 

@@ -252,6 +252,9 @@ class GameScreen:
         p_rect = p.rect
         ent_rect = ent.rect
 
+        if ent.etype not in POWERUP_TYPES and not p.on_ground:
+            return
+
         if ent.etype in {"box", "conveyor", "long_box"} and p_rect.bottom <= ent_rect.top + 8:
             return
 
@@ -418,38 +421,40 @@ class GameScreen:
         run_t = pygame.time.get_ticks() * 0.018
         bob = int(math.sin(run_t) * 3)
         body_rect = body_rect.move(0, bob)
+        model_rect = pygame.Rect(0, 0, max(24, int(body_rect.w * 0.85)), max(20, int(body_rect.h * 0.85)))
+        model_rect.center = body_rect.center
 
         frames = self.sausage_sprites.get(p.sausage.name, [])
         if frames:
             frame = frames[int(pygame.time.get_ticks() * 0.015) % len(frames)]
-            scaled = pygame.transform.smoothscale(frame, (body_rect.w + 24, body_rect.h + 30))
-            self.screen.blit(scaled, (body_rect.x - 12, body_rect.y - 18))
-            pygame.draw.ellipse(self.screen, (120, 120, 145), (body_rect.centerx - 28, LANES_Y[p.target_lane] - 4, 56, 12))
+            scaled = pygame.transform.smoothscale(frame, (model_rect.w + 22, model_rect.h + 26))
+            self.screen.blit(scaled, (model_rect.x - 11, model_rect.y - 16))
+            pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 24, LANES_Y[p.target_lane] - 4, 48, 11))
             return
 
-        pygame.draw.ellipse(self.screen, (96, 46, 40), body_rect.inflate(8, 8))
-        pygame.draw.ellipse(self.screen, p.sausage.color, body_rect)
+        pygame.draw.ellipse(self.screen, (96, 46, 40), model_rect.inflate(8, 8))
+        pygame.draw.ellipse(self.screen, p.sausage.color, model_rect)
         if p.sausage.name == "Охотничья":
-            pygame.draw.ellipse(self.screen, (190, 35, 42), body_rect.inflate(-18, -14), 3)
+            pygame.draw.ellipse(self.screen, (190, 35, 42), model_rect.inflate(-16, -12), 3)
         if p.sausage.name == "Баварская":
             for i in range(4):
-                sx = body_rect.x + 20 + i * 15
-                pygame.draw.line(self.screen, (170, 62, 30), (sx, body_rect.y + 10), (sx + 8, body_rect.bottom - 8), 3)
-        pygame.draw.ellipse(self.screen, (250, 220, 180), body_rect.inflate(-30, -18), 3)
-        pygame.draw.ellipse(self.screen, (255, 245, 225), (body_rect.x + 8, body_rect.y + 6, 42, 12))
+                sx = model_rect.x + 18 + i * 12
+                pygame.draw.line(self.screen, (170, 62, 30), (sx, model_rect.y + 9), (sx + 7, model_rect.bottom - 7), 2)
+        pygame.draw.ellipse(self.screen, (250, 220, 180), model_rect.inflate(-24, -14), 3)
+        pygame.draw.ellipse(self.screen, (255, 245, 225), (model_rect.x + 7, model_rect.y + 5, 34, 10))
 
-        eye_y = body_rect.y + 14
-        pygame.draw.circle(self.screen, WHITE, (body_rect.x + 26, eye_y), 6)
-        pygame.draw.circle(self.screen, WHITE, (body_rect.x + 52, eye_y), 6)
-        pygame.draw.circle(self.screen, (0, 0, 0), (body_rect.x + 26, eye_y), 2)
-        pygame.draw.circle(self.screen, (0, 0, 0), (body_rect.x + 52, eye_y), 2)
-        pygame.draw.arc(self.screen, (70, 20, 20), (body_rect.x + 26, body_rect.y + 16, 28, 14), math.pi * 0.1, math.pi * 0.9, 2)
+        eye_y = model_rect.y + 12
+        pygame.draw.circle(self.screen, WHITE, (model_rect.x + 22, eye_y), 5)
+        pygame.draw.circle(self.screen, WHITE, (model_rect.x + 44, eye_y), 5)
+        pygame.draw.circle(self.screen, (0, 0, 0), (model_rect.x + 22, eye_y), 2)
+        pygame.draw.circle(self.screen, (0, 0, 0), (model_rect.x + 44, eye_y), 2)
+        pygame.draw.arc(self.screen, (70, 20, 20), (model_rect.x + 22, model_rect.y + 13, 22, 12), math.pi * 0.1, math.pi * 0.9, 2)
         leg_a = int(math.sin(run_t) * 9)
         leg_b = int(math.sin(run_t + math.pi) * 9)
-        pygame.draw.line(self.screen, (72, 28, 22), (body_rect.x + 26, body_rect.bottom - 2), (body_rect.x + 14 + leg_a, body_rect.bottom + 14), 5)
-        pygame.draw.line(self.screen, (72, 28, 22), (body_rect.x + 44, body_rect.bottom - 2), (body_rect.x + 58 + leg_b, body_rect.bottom + 14), 5)
-        pygame.draw.line(self.screen, (72, 28, 22), (body_rect.x + 62, body_rect.bottom - 2), (body_rect.x + 74 - leg_a, body_rect.bottom + 14), 5)
-        pygame.draw.ellipse(self.screen, (120, 120, 145), (body_rect.centerx - 28, LANES_Y[p.target_lane] - 4, 56, 12))
+        pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 22, model_rect.bottom - 2), (model_rect.x + 12 + leg_a, model_rect.bottom + 12), 4)
+        pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 38, model_rect.bottom - 2), (model_rect.x + 50 + leg_b, model_rect.bottom + 12), 4)
+        pygame.draw.line(self.screen, (72, 28, 22), (model_rect.x + 52, model_rect.bottom - 2), (model_rect.x + 62 - leg_a, model_rect.bottom + 12), 4)
+        pygame.draw.ellipse(self.screen, (120, 120, 145), (model_rect.centerx - 24, LANES_Y[p.target_lane] - 4, 48, 11))
 
     def draw_sauce_packet(self, rect: pygame.Rect, base_color, accent_color, label: str):
         pygame.draw.polygon(
